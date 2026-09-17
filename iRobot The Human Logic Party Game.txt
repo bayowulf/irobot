@@ -1,0 +1,58 @@
+# iRobot: The Human Logic Party Game
+
+**iRobot** is a party game of literal logic, physical comedy, and programming panic. One player becomes a rigid, instruction-following Robot, while their team acts as the Programmers sending serial commands line-by-line. Meanwhile, the opposing team acts as the ruthless Compiler, watching for logic gaps, illegal syntax, and physical crashes.
+
+---
+
+## **1. Game Setup & Roles**
+
+Players divide into two teams and rotate the following roles every round:
+
+* **The Robot (1 Player):** Executes incoming card commands literally. Must discard human context clues, intuition, and common sense.
+* **The Programmers (1–3 Players):** Drafts, arranges, and streams card logic to the Robot line-by-line.
+* **The Compiler (Opposing Team):** Holds the "Compiler Buzzer." Watches execution strictly to catch invalid syntax, impossible movements, or environmental crashes.
+
+---
+
+## **2. Core Gameplay Loop**
+
+1. **Draw & Draft:** The Programmers draw a hand of cards from the Coding Deck and receive a target Challenge (e.g., *"Walk to the table, pick up the empty glass, fill it with water, and set it down"*).
+2. **Build the Stack:** The Programmers lay out a sequence of cards on the table from top to bottom.
+3. **Press RUN:** The Programmers declare "RUN." The round timer starts (typically 2 to 3 minutes).
+4. **Serial Streaming:** The Programmers read cards aloud **verbatim** one at a time. They cannot speak natural English; saying conversational phrases results in an immediate error.
+5. **Acknowledge & Execute:** The Robot executes the single command, stops, and gives a audio beep (or says `"COMPLETE"`). Only then do the Programmers read the next card.
+
+---
+
+## **3. The Coding Deck & Syntax**
+
+The deck consists of visual, snap-together card categories:
+
+* **Action Cards (Blue):** Movement and manipulation (`MOVE`, `ROTATE`, `RUN MOTOR [Limb]`, `GRASP`, `RELEASE`).
+* **Parameter Cards (Orange):** Values and directions (`1 STEP`, `90°`, `LEFT`, `RIGHT`, `SPEED: 50%`).
+* **Target Cards (Green):** Nouns and surfaces (`OBJECT IN FRONT`, `NEAREST SURFACE`).
+* **Control Flow Cards (Purple):** Sequences and loops (`REPEAT [X] TIMES`, `WHILE [Condition]`, `IF / THEN`).
+* **Sensor Cards (Yellow):** Triggers (`DISTANCE < 6 INCHES`, `TOUCH SENSOR = PRESSED`).
+
+---
+
+## **4. Compiler Errors & Penalties**
+
+The Compiler team (or the Robot) can yell **"COMPILER ERROR!"** and slam the buzzer to freeze the game instantly when an error occurs:
+
+* **Syntax Errors (Programmer Mistake):** Reading a card out of order, missing a required parameter card (e.g., `MOVE` with no distance specified), or using plain English.
+* **Runtime Errors (Physical / Environment Mistake):** Walking into a wall (**OutOfBounds Exception**), grasping empty air (**Null Pointer Exception**), or attempting physical impossibilities.
+* **Penalty:** Execution halts instantly. The Robot freezes in place, and the Programmers lose **15 seconds** from their timer while scrambling to edit their card stack before resuming.
+
+---
+
+## **5. Critical Safety Rules**
+
+* **Safety Override:** The Robot must refuse any command that causes physical harm, tripping, or property damage, immediately triggering a system "Crash" instead of executing the movement.
+* **Default States:** Undefined actions revert to literal mechanical baselines (e.g., a `GRASP` command without a specified target closes the hand completely into a fist).
+
+---
+
+## **6. How to Win**
+
+Teams score points based on how quickly they complete challenges without triggering Compiler Errors. The team with the most points after every player has had one turn serving as the Robot wins the game.
