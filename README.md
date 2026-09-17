@@ -1,4 +1,22 @@
-# iRobot: The Human Logic Party Game
+<div align="center">
+
+# 🤖 iRobot: The Human Logic Party Game
+
+**Literal logic. Physical comedy. Programming panic.**
+
+![Players: 5](https://img.shields.io/badge/PLAYERS-5-blueviolet?style=for-the-badge)
+![Play time: 30-60 min](https://img.shields.io/badge/PLAY_TIME-30--60_MIN-blue?style=for-the-badge)
+![Ages: 9+](https://img.shields.io/badge/AGES-9%2B-orange?style=for-the-badge)
+![Format: Print & Play](https://img.shields.io/badge/FORMAT-PRINT_%26_PLAY-brightgreen?style=for-the-badge)
+![Version: v0.1.1](https://img.shields.io/badge/VERSION-v0.1.1-informational?style=for-the-badge)
+
+**Share link:** https://github.com/bayowulf/irobot
+
+</div>
+
+> [!TIP]
+> **This page *is* the game.** Everything below is the complete rulebook — nothing to
+> install or download. Scroll down, print the cards in §12, grab a timer, and play.
 
 A print-and-play party game of literal logic, physical comedy, and programming panic for
 **5 players** — built for one 9-year-old + two parents + two grandparents.
@@ -10,7 +28,7 @@ teams: the **Programmers**, who feed the Robot card commands one line at a time,
 
 ---
 
-## 0. Quick Start (read this first)
+## 🚀 0. Quick Start (read this first)
 
 1. Pick one player as the **Robot** — they're neutral, and they keep the role for a whole
    session (4 rounds).
@@ -23,7 +41,7 @@ teams: the **Programmers**, who feed the Robot card commands one line at a time,
 
 ---
 
-## 1. Premise & Roles
+## 🎭 1. Premise & Roles
 
 - **The Robot (1 player, neutral):** Executes commands literally. No common sense, no
   intuition, no guessing. **The Robot never sees or hears the Challenge** — only the card
@@ -43,7 +61,7 @@ teams: the **Programmers**, who feed the Robot card commands one line at a time,
 
 ---
 
-## 2. Session Play (the shape of the game)
+## 📖 2. Session Play (the shape of the game)
 
 The night is a series of **sessions**. Each session is a chapter with one Robot and two
 fixed teams.
@@ -74,7 +92,7 @@ The **Robot is the odd one out** in every session, so the two teams are always a
 
 ---
 
-## 3. Setup (once per session)
+## 🧰 3. Setup (once per session)
 
 | Item | Setup |
 | --- | --- |
@@ -89,7 +107,7 @@ The **Robot is the odd one out** in every session, so the two teams are always a
 
 ---
 
-## 4. Round Flow
+## 🔁 4. Round Flow
 
 1. **Draw & Draft** — the Programmers read the Challenge (silently, away from the Robot)
    and look at their hand.
@@ -108,7 +126,7 @@ The **Robot is the odd one out** in every session, so the two teams are always a
 
 ---
 
-## 5. The One Speaking Rule
+## 🗣️ 5. The One Speaking Rule
 
 Programmers (and the Robot) may speak **only words printed on cards**, plus these three:
 
@@ -119,7 +137,7 @@ This replaces vague rules like "no natural English" with something anyone can ch
 
 ---
 
-## 6. Compiler Errors & Buzz / Overrule
+## 🐛 6. Compiler Errors & Buzz / Overrule
 
 The Compiler slams the buzzer and yells **"COMPILER ERROR!"** The Robot freezes instantly.
 
@@ -143,7 +161,7 @@ real stakes. No votes, no debates.
 
 ---
 
-## 7. Scoring
+## 🧮 7. Scoring
 
 Two scoreboards: **team tokens** (reset each session) and **personal points** (last all
 night).
@@ -177,7 +195,7 @@ night).
 
 ---
 
-## 8. Winning the Night
+## 🏆 8. Winning the Night
 
 When everyone has had a turn as Robot, crown the titles:
 
@@ -190,7 +208,7 @@ means the 9-year-old can chase laughs while their team chases the Championship.
 
 ---
 
-## 9. Safety Override (absolute)
+## 🦺 9. Safety Override (absolute)
 
 The Robot may refuse **any** command by saying **"WILL CAUSE INJURY."**
 
@@ -203,7 +221,7 @@ Use **Eco Mode** (§10) for a gentler round.
 
 ---
 
-## 10. Eco Mode
+## 🔋 10. Eco Mode
 
 For a grandparent, an injured player, or a tired kid.
 
@@ -213,7 +231,7 @@ For a grandparent, an injured player, or a tired kid.
 
 ---
 
-## 11. Step Mode vs. Script Mode
+## 🎬 11. Step Mode vs. Script Mode
 
 | Mode | How it works | Best for |
 | --- | --- | --- |
@@ -224,7 +242,7 @@ The table picks per round. Script Mode is harder — award it **+1 bonus** if co
 
 ---
 
-## 12. Cards
+## 🃏 12. Cards
 
 Print each category on its own color. If you can't print in color, write the color word
 in the corner. Symbols are hints, not requirements.
@@ -317,7 +335,7 @@ in the corner. Symbols are hints, not requirements.
 
 ---
 
-## 13. Challenges
+## 🎯 13. Challenges
 
 Keep the Challenge hidden from the Robot. Difficulty is a suggestion — scale to the table.
 
@@ -346,7 +364,7 @@ Keep the Challenge hidden from the Robot. Difficulty is a suggestion — scale t
 
 ---
 
-## 14. Alternate Mode: Round-Robin
+## 🔄 14. Alternate Mode: Round-Robin
 
 Use this for **exactly 4 players** or a quick single-round night. There is no neutral Robot
 here — the Robot plays on the Programmers' team.
@@ -362,7 +380,7 @@ Step vs. Script, cards, and Challenges — works the same.
 
 ---
 
-## 15. Cheat Sheet
+## 📋 15. Cheat Sheet
 
 **Roles:** Robot (neutral in Session Play; on the programming team in Alternate Mode, §14
 — obeys literally, never sees the Challenge) · Programmers (one team, read cards) ·
