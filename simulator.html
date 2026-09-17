@@ -87,6 +87,7 @@
   .log .k-complete{border-color:var(--target);color:#b6f0c0;font-weight:700}
   .log .k-timeout{border-color:var(--glitch);color:#ff9b9b;font-weight:700}
   .log .k-safety{border-color:#e6b800;color:#ffe08a}
+  .log .k-posture{border-color:#33456b;color:#bcd6ff}
   .log .k-round-end,.log .k-session-end{border-color:#7048e8;color:#d9c9ff;font-weight:700}
   .log .k-roles,.log .k-draw,.log .k-plan,.log .k-run{border-color:#33456b}
   .scoretbl{width:100%;border-collapse:collapse;font-size:12px}
@@ -239,35 +240,43 @@ const GLITCH_EFFECT = {
 };
 
 const PLAYERS = {
-  alice:  {id:"alice",  name:"Alice",  rel:"parent",     age:38, rt:1.00, read:1.00, acc:1.00, comedy:0.9, color:"#5b8cff"},
-  bob:    {id:"bob",    name:"Bob",    rel:"parent",     age:40, rt:0.95, read:0.98, acc:1.02, comedy:1.0, color:"#2f9e44"},
-  verity: {id:"verity", name:"Verity", rel:"grandmother",age:68, rt:1.30, read:1.15, acc:0.95, comedy:1.2, color:"#f08c00"},
-  julius: {id:"julius", name:"Julius", rel:"grandfather",age:72, rt:1.40, read:1.20, acc:0.92, comedy:1.1, color:"#7048e8"},
-  quentin:{id:"quentin",name:"Quentin",rel:"child",      age:9,  rt:1.25, read:1.35, acc:0.90, comedy:1.3, color:"#e64980"}
+  alice:  {id:"alice",  name:"Alice",  rel:"parent",     age:38, rt:1.00, read:1.00, motor:1.00, mobility:1.00, acc:1.00, comedy:0.9, color:"#5b8cff"},
+  bob:    {id:"bob",    name:"Bob",    rel:"parent",     age:40, rt:0.95, read:0.98, motor:0.97, mobility:1.00, acc:1.02, comedy:1.0, color:"#2f9e44"},
+  verity: {id:"verity", name:"Verity", rel:"grandmother",age:68, rt:1.30, read:1.15, motor:1.35, mobility:1.50, acc:0.95, comedy:1.2, color:"#f08c00"},
+  julius: {id:"julius", name:"Julius", rel:"grandfather",age:72, rt:1.40, read:1.20, motor:1.45, mobility:1.60, acc:0.92, comedy:1.1, color:"#7048e8"},
+  quentin:{id:"quentin",name:"Quentin",rel:"child",      age:9,  rt:1.25, read:1.35, motor:1.20, mobility:1.15, acc:0.90, comedy:1.3, color:"#e64980"}
 };
 const ALL_IDS = ["alice","bob","verity","julius","quentin"];
 const TEAM_A = ["alice","bob"];
 const TEAM_B = ["verity","julius"];
 
-const ACTION_TIME = {
-  "MOVE":2.2,"ROTATE":1.6,"RAISE ARM":1.4,"LOWER ARM":1.4,"GRASP":1.6,"RELEASE":1.2,
-  "POINT":1.0,"LOOK":1.0,"BEEP":0.6,"FREEZE":1.0,"SPIN":2.2,
-  "OPEN MOUTH":0.8,"CLOSE EYES":0.8
+const TIMING = {
+  SRT_VIS:0.19, CHOICE:0.45, HICK_B:0.10, READ_WPS:2.6, SPEECH_ONSET:0.35,
+  SEARCH_PER_ITEM:0.05, DELIBERATE_MIN:0.4, DELIBERATE_MAX:1.0, PICKUP:0.9,
+  TURN_GAP:0.4, WALK_MPS:1.4, STEP_M:0.7, STAND:1.4, SIT:1.3, BEAT:0.3,
+  BUZZ_DECIDE:0.25, BUZZ_PRESS:0.20, JITTER:0.18
 };
+
+const ARM_TIME = {
+  "RAISE ARM":0.7,"LOWER ARM":0.7,"POINT":0.5,"LOOK":0.5,"BEEP":0.4,
+  "FREEZE":1.0,"OPEN MOUTH":0.5,"CLOSE EYES":0.5,"GRASP":0.9,"RELEASE":0.7
+};
+const TURN_TIME = { "90 DEGREES":0.8, "180 DEGREES":1.4, "SPIN":1.8 };
+const STAND_ACTIONS = new Set(["MOVE","ROTATE","SPIN"]);
 
 const CHALLENGES = [
   {id:1,diff:"easy",text:"Pick up the ball and put it in the box.",sig:[{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}]},
   {id:2,diff:"easy",text:"Point at the nearest human and beep.",sig:[{a:"POINT"},{a:"BEEP"}]},
   {id:3,diff:"easy",text:"Pick up the cup and hand it to the person on your right.",sig:[{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}]},
   {id:4,diff:"easy",text:"Raise both arms, then lower them.",sig:[{a:"RAISE ARM"},{a:"LOWER ARM"}]},
-  {id:5,diff:"medium",text:"Walk to the table, pick up the empty glass, and set it on the nearest surface.",sig:[{a:"MOVE",p:"dist"},{a:"GRASP"},{a:"RELEASE"}]},
+  {id:5,diff:"medium",text:"Walk to the table, pick up the empty glass, and set it on the nearest surface.",sig:[{a:"MOVE",p:"dist",d:3.0},{a:"GRASP"},{a:"RELEASE"}]},
   {id:6,diff:"medium",text:"Put the ball on the table, then hand the cup to a human.",sig:[{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"},{a:"GRASP"},{a:"RELEASE"}]},
   {id:7,diff:"medium",text:"Grasp the object in front, rotate 90 degrees, and release it into the box.",sig:[{a:"GRASP"},{a:"ROTATE",p:"angle"},{a:"RELEASE"}]},
   {id:8,diff:"medium",text:"Touch the nearest human, then point at the nearest surface.",sig:[{a:"GRASP"},{a:"POINT"}]},
   {id:9,diff:"hard",text:"Get the hat onto someone's head without touching them.",sig:[{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}]},
   {id:10,diff:"hard",text:"Pick up the ball, spin 180 degrees, and place it on the nearest surface.",sig:[{a:"GRASP"},{a:"SPIN",p:"angle"},{a:"RELEASE"}]},
-  {id:11,diff:"hard",text:"Hand the cup to every human in the room, one at a time.",sig:[{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"},{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}]},
-  {id:12,diff:"hard",text:"Move to the table, grasp the glass, and return it to the robot's starting spot.",sig:[{a:"MOVE",p:"dist"},{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}]},
+  {id:11,diff:"hard",text:"Hand the cup to every human in the room, one at a time.",sig:[{a:"GRASP"},{a:"MOVE",p:"dist",d:1.5},{a:"RELEASE"},{a:"GRASP"},{a:"MOVE",p:"dist",d:1.5},{a:"RELEASE"}]},
+  {id:12,diff:"hard",text:"Move to the table, grasp the glass, and return it to the robot's starting spot.",sig:[{a:"MOVE",p:"dist",d:2.5},{a:"GRASP"},{a:"MOVE",p:"dist",d:2.5},{a:"RELEASE"}]},
   {id:13,diff:"script",script:true,text:"Pick up two objects and stack them.",sig:[{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"},{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}]},
   {id:14,diff:"script",script:true,text:"Collect one object from each human and deposit them in the box.",sig:[{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"},{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"},{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}]},
   {id:15,diff:"script",script:true,text:"Move, rotate, grasp, release, and beep — in exactly that order, twice.",sig:[{a:"MOVE",p:"dist"},{a:"ROTATE",p:"angle"},{a:"GRASP"},{a:"RELEASE"},{a:"BEEP"},{a:"MOVE",p:"dist"},{a:"ROTATE",p:"angle"},{a:"GRASP"},{a:"RELEASE"},{a:"BEEP"}]}
@@ -304,10 +313,40 @@ function paramType(w){
   return "other";
 }
 
-const TIME_SCALE = 2;
-
-function reaction(base, player, rng){
-  return base * TIME_SCALE * player.rt * rng.jit(0.16);
+function perceive(player, options, rng){
+  return (TIMING.SRT_VIS + TIMING.HICK_B * Math.log2(options + 1)) * player.rt * rng.jit(TIMING.JITTER);
+}
+function speakTime(words, player){
+  return (TIMING.SPEECH_ONSET + words / TIMING.READ_WPS) * player.read;
+}
+function searchTime(n, player, rng){
+  return Math.max(0, n) * TIMING.SEARCH_PER_ITEM * player.rt * rng.jit(0.10);
+}
+function deliberate(player, rng){
+  return rng.range(TIMING.DELIBERATE_MIN, TIMING.DELIBERATE_MAX) * player.rt;
+}
+function buzzLatency(player, rng){
+  return (TIMING.SRT_VIS + TIMING.BUZZ_DECIDE) * player.rt + TIMING.BUZZ_PRESS * player.motor;
+}
+function turnGap(player, rng){
+  return TIMING.TURN_GAP * player.rt * rng.jit(0.12);
+}
+function pickup(player, rng){
+  return TIMING.PICKUP * player.motor * rng.jit(0.10);
+}
+function actionTime(action, paramWord, step, robot, rng){
+  const j = (x) => x * rng.jit(0.12);
+  if (action === "MOVE"){
+    let d = step.d;
+    if (d === undefined){
+      if (paramWord === "2 STEPS") d = 2 * TIMING.STEP_M;
+      else d = TIMING.STEP_M;
+    }
+    return {t:(d / TIMING.WALK_MPS) * robot.mobility, kind:"move"};
+  }
+  if (action === "ROTATE") return {t:j(TURN_TIME[paramWord] || 1.0) * robot.motor, kind:"move"};
+  if (action === "SPIN") return {t:j(TURN_TIME["SPIN"]) * robot.mobility, kind:"move"};
+  return {t:j(ARM_TIME[action] || 0.8) * robot.motor, kind:"arm"};
 }
 
 function buildCardInstances(cfg){
@@ -382,7 +421,8 @@ function simulate(cfg){
     deck: deckCounts(cfg), draws:{}, plays:{}, wildcardUses:0, hands:0, unsolvable:0,
     missingByWord:{}, rounds:[], errors:{syntax:0,runtime:0,missed:0,safety:0},
     buzz:{used:0,refunded:0,missed:0}, overrule:0, glitch:0, compilerCards:0, completed:0, timeout:0,
-    paramSteps:0, paramDistinct:0, paramReuse:0, paramPoolHands:0, paramStarvedHands:0, challenges:{}
+    paramSteps:0, paramDistinct:0, paramReuse:0, paramPoolHands:0, paramStarvedHands:0, challenges:{},
+    time:{draft:0, read:0, execute:0, move:0, arm:0, stand:0, gap:0, buzz:0}
   };
 
   const codingDeck = [];
@@ -425,6 +465,7 @@ function simulate(cfg){
     const progLabel = round%2===1 ? "A" : "B";
     const reader = readerOf(progTeam);
     const compBest = compTeam.map(id=>PLAYERS[id]).sort((a,b)=>b.acc-a.acc)[0];
+    let posture = "seated";
 
     props.buzzTokens = 3; props.overrule = 1;
     const roles = {};
@@ -441,7 +482,10 @@ function simulate(cfg){
     analytics.hands++;
     push("draw", `Challenge drawn (#${challenge.id}, ${challenge.diff}) and kept hidden from ${robotP.name}. Hand: ${hand.filter(c=>c.cat!=="wild").length} cards + 2 wildcards.`, {challenge, hand});
 
-    wait(6 + rng.range(0,1)*6 + reader.read*3);
+    const draftTime = (challenge.text.split(" ").length / (TIMING.READ_WPS * 2)) * reader.read
+      + rng.range(0.5, 1.5) + 8 * pickup(reader, rng) + searchTime(8, reader, rng);
+    analytics.time.draft += draftTime;
+    wait(draftTime);
 
     const plan = analyzeHand(hand, challenge.sig, rng);
     analytics.wildcardUses += plan.wilds;
@@ -461,7 +505,8 @@ function simulate(cfg){
       if (e.paramWild) analytics.plays["BLANK"] = (analytics.plays["BLANK"]||0)+1;
     });
 
-    const buildTime = 8 + plan.stack.length*1.2 + rng.range(0,1)*4;
+    const buildTime = plan.stack.length * (searchTime(plan.stack.length / 2, reader, rng) + pickup(reader, rng) + deliberate(reader, rng));
+    analytics.time.draft += buildTime;
     wait(buildTime);
     push("plan", `Stack built with ${plan.stack.length} command slots${plan.missing.length?` — ${plan.missing.length} requirement(s) uncovered`:""}. Wildcards used: ${plan.wilds}.`, {challenge, hand, stack:plan.stack, missing:plan.missing});
 
@@ -497,7 +542,8 @@ function simulate(cfg){
       if (props.buzzTokens <= 0){ analytics.buzz.missed++; analytics.errors.missed++; push("buzz", `Compiler reaches for the buzzer but has no buzz tokens left — ${issue} goes unchallenged.`, {stackIndex:idx}); return; }
       let detected = rng.chance(Math.min(0.95, 0.45 + 0.4*compBest.acc - 0.12*(compBest.rt-1)));
       if (!detected){ analytics.errors.missed++; push("error-"+issue.type, `MISSED by the Compiler: ${issue.msg}. No penalty.`, {stackIndex:idx}); wait(0.8); return; }
-      const latency = reaction(0.22, compBest, rng) + 0.3;
+      const latency = buzzLatency(compBest, rng);
+      analytics.time.buzz += latency;
       wait(latency);
       props.buzzTokens--; props.buzzer = true;
       analytics.buzz.used++;
@@ -553,10 +599,11 @@ function simulate(cfg){
         continue;
       }
 
-      const rf = reaction(0.42, reader, rng);
+      const options = (plan.stack.length - i) + 2;
       const words = actionWord.split(" ").length + (paramWord?2:0);
-      const readTime = (rf + words/2.5*reader.read*rng.jit(0.12)*TIME_SCALE) * mult + addT;
-      push("read", `${reader.name} reads "${cmd}" verbatim.`, {stackIndex:i, card:actionWord});
+      const readTime = (searchTime(i, reader, rng) + perceive(reader, options, rng) + speakTime(words, reader) + deliberate(reader, rng)) * mult + addT;
+      analytics.time.read += readTime;
+      push("read", `${reader.name} reads "${cmd}" verbatim.`, {stackIndex:i, card:actionWord, posture});
       wait(readTime);
 
       if (skipCmd){
@@ -579,8 +626,18 @@ function simulate(cfg){
         buzzRoll({type:"syntax", msg:"the card sequence is read out of order"}, i, progTeam, compTeam);
       }
 
-      const exec = (ACTION_TIME[entry.step.a]||1.4) * TIME_SCALE * (0.75 + 0.25*robotP.rt) * rng.jit(0.14) * mult + addT;
-      push("execute", `${robotP.name} executes ${entry.step.a}${paramWord?" "+paramWord:""}.`, {stackIndex:i, card:actionWord});
+      if (STAND_ACTIONS.has(entry.step.a) && posture === "seated"){
+        const standTime = TIMING.STAND * robotP.mobility * rng.jit(0.10);
+        analytics.time.stand += standTime;
+        push("posture", `${robotP.name} stands up.`, {stackIndex:i, posture:"standing"});
+        wait(standTime);
+        posture = "standing";
+      }
+      const at = actionTime(entry.step.a, entry.paramCard ? entry.paramCard.word : null, entry.step, robotP, rng);
+      const exec = at.t * mult + addT;
+      analytics.time.execute += exec;
+      analytics.time[at.kind] += exec;
+      push("execute", `${robotP.name} executes ${entry.step.a}${paramWord?" "+paramWord:""}.`, {stackIndex:i, card:actionWord, posture});
       wait(exec);
 
       if (rng.chance(0.015*(1-quality)+0.01)){
@@ -590,8 +647,18 @@ function simulate(cfg){
         wait(0.6);
       }
 
-      push("beep", `${robotP.name} beeps: "COMPLETE".`, {stackIndex:i, card:actionWord});
-      wait(reaction(0.22, reader, rng)*0.6 + 0.25);
+      push("beep", `${robotP.name} beeps: "COMPLETE".`, {stackIndex:i, card:actionWord, posture});
+      const gap = TIMING.BEAT + turnGap(reader, rng);
+      analytics.time.gap += gap;
+      wait(gap);
+    }
+
+    if (posture === "standing"){
+      const sitTime = TIMING.SIT * robotP.mobility * rng.jit(0.10);
+      analytics.time.stand += sitTime;
+      push("posture", `${robotP.name} sits back down.`, {posture:"seated"});
+      wait(sitTime);
+      posture = "seated";
     }
 
     let roundResult;
@@ -674,6 +741,7 @@ function buildDiagnostics(A){
   if (A.buzz.missed > 0) out.push(`<b>Missed errors:</b> ${A.buzz.missed} real error(s) went unchallenged (reaction/reach limits).`);
   if (A.glitch === 0) out.push(`<b>Glitch deck idle:</b> no Glitch cards entered play. BUG INJECTION frequency may be too low to matter.`);
   if (A.compilerCards === 0) out.push(`<b>Compiler cards idle:</b> none of the 5 Compiler cards were used.`);
+  if (A.time) out.push(`<b>Timing mix:</b> draft ${A.time.draft.toFixed(0)}s · read ${A.time.read.toFixed(0)}s · execute ${A.time.execute.toFixed(0)}s (move ${A.time.move.toFixed(0)}s) · stand/sit ${A.time.stand.toFixed(0)}s · handoff ${A.time.gap.toFixed(0)}s · buzz ${A.time.buzz.toFixed(0)}s (whole session).`);
   if (!out.length) out.push(`No balance flags raised this session. Run more seeds to confirm stability.`);
   return out;
 }
@@ -813,11 +881,14 @@ function applyEvent(ev){
       $("#roundlbl").textContent = "Round " + ev.round + " · streaming";
       break;
     case "execute":
-      setRobotState(PLAYERS[cfg.robot].name, `executing: ${ev.card}…`);
+      setRobotState(PLAYERS[cfg.robot].name, `executing: ${ev.card}… (${ev.posture||"seated"})`);
+      break;
+    case "posture":
+      setRobotState(PLAYERS[cfg.robot].name, ev.posture === "standing" ? "standing" : "seated");
       break;
     case "beep":
       renderStack(ui.stack, ev.stackIndex+1>ui.stack.length-1?ui.stack.length-1:ev.stackIndex+1, ev.stackIndex);
-      setRobotState(PLAYERS[cfg.robot].name, `"COMPLETE"`);
+      setRobotState(PLAYERS[cfg.robot].name, `"COMPLETE" (${ev.posture||"seated"})`);
       break;
     case "buzz":
       $("#buzzer").classList.add("lit");
@@ -956,7 +1027,7 @@ function renderAnalytics(){
     </div>`;
 }
 
-const SIM_VERSION = "0.3.1";
+const SIM_VERSION = "0.4.0";
 
 function logLines(){
   return (ui.tape || []).map(ev => {
@@ -1017,7 +1088,8 @@ function aggregateRuns(runs){
     glitch:0, compilerCards:0, wildcardUses:0, unsolvable:0, hands:0,
     missingTotal:0, missingByWord:{},
     paramSteps:0, paramDistinct:0, paramReuse:0, paramPoolHands:0, paramStarvedHands:0,
-    cards:{}, challenges:{}
+    cards:{}, challenges:{},
+    time:{draft:0, read:0, execute:0, move:0, arm:0, stand:0, gap:0, buzz:0}
   };
   runs.forEach(r => {
     const a = r.analytics;
@@ -1037,6 +1109,7 @@ function aggregateRuns(runs){
       const c = A.cards[w] || (A.cards[w] = {deck:a.deck[w], drawn:0, played:0});
       c.drawn += a.draws[w]||0; c.played += a.plays[w]||0;
     });
+    if (a.time) Object.keys(A.time).forEach(k => { A.time[k] += a.time[k]||0; });
     Object.keys(a.missingByWord||{}).forEach(w => { A.missingByWord[w] = (A.missingByWord[w]||0) + a.missingByWord[w]; });
     Object.keys(a.challenges||{}).forEach(id => {
       const c = A.challenges[id] || (A.challenges[id] = {drawn:0, completed:0});
@@ -1065,6 +1138,7 @@ function buildAggregateDiagnostics(A){
   }
   if (A.unsolvable > 0) out.push(`<b>Solvability:</b> ${A.unsolvable}/${A.hands} hands (${Math.round(100*A.unsolvable/A.hands)}%) unsatisfiable even with both wildcards.`);
   if (A.paramSteps > 0) out.push(`<b>Pairing:</b> ${A.paramSteps} movement steps · ${A.paramDistinct} distinct params · ${A.paramReuse} reused · ${A.paramStarvedHands} starved hand(s).`);
+  out.push(`<b>Timing mix (all sessions):</b> draft ${A.time.draft.toFixed(0)}s · read ${A.time.read.toFixed(0)}s · execute ${A.time.execute.toFixed(0)}s (move ${A.time.move.toFixed(0)}s) · stand/sit ${A.time.stand.toFixed(0)}s · handoff ${A.time.gap.toFixed(0)}s · buzz ${A.time.buzz.toFixed(0)}s.`);
   if (A.neverDrawn.length) out.push(`<b>Never drawn:</b> ${A.neverDrawn.join(", ")}.`);
   if (A.drawnNotPlayed.length) out.push(`<b>Drawn but never played:</b> ${A.drawnNotPlayed.join(", ")}.`);
   out.push(`<b>Errors:</b> syntax ${A.errors.syntax} · runtime ${A.errors.runtime} · missed ${A.errors.missed} · safety ${A.errors.safety} · buzzes ${A.buzz.used} · overrules ${A.overrule}.`);
@@ -1128,6 +1202,7 @@ function runBatch(){
     btn.textContent = "Run Batch";
     btn.disabled = false;
     ui.batching = false;
+    if ($("#seed").value === baseSeed) $("#seed").value = "irobot-" + Math.floor(Math.random()*1e9).toString(36);
   }
   chunk();
 }
