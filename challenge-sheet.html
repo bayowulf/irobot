@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iRobot — Challenge Sheet</title>
+<style>
+  :root{ --cols:3; --rows:3; --cell-w:2.83333in; --cell-h:3.66667in; }
+  *{ box-sizing:border-box; }
+  html, body{ margin:0; padding:0; }
+  body{ font-family:"Segoe UI", Arial, Helvetica, sans-serif; color:#111; }
+
+  .page{
+    position:relative;
+    width:8.5in;
+    height:11in;
+    overflow:hidden;
+    background:#fff;
+    page-break-after:always;
+    break-after:page;
+  }
+  .page:last-of-type{ page-break-after:auto; break-after:auto; }
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(var(--cols), var(--cell-w));
+    grid-template-rows:repeat(var(--rows), var(--cell-h));
+    width:8.5in;
+  }
+  .cell{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+  }
+  .slip{
+    position:absolute;
+    inset:0.12in;
+    border:0.02in solid #111;
+    border-radius:6px;
+    padding:0.16in;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+  }
+  .tag{
+    position:absolute;
+    top:0.1in;
+    left:0.12in;
+    font-size:8pt;
+    font-weight:800;
+    letter-spacing:.8px;
+    text-transform:uppercase;
+    color:#fff;
+    background:#111;
+    padding:0.02in 0.06in;
+    border-radius:3px;
+  }
+  .num{
+    position:absolute;
+    top:0.1in;
+    right:0.14in;
+    font-size:8pt;
+    color:#999;
+  }
+  .adv{
+    position:absolute;
+    bottom:0.1in;
+    left:0.12in;
+    font-size:7pt;
+    color:#999;
+    letter-spacing:.4px;
+    text-transform:uppercase;
+  }
+  .text{
+    font-size:15pt;
+    font-weight:700;
+    line-height:1.22;
+    max-width:100%;
+  }
+  .text .fill{ font-weight:400; font-style:italic; color:#666; }
+
+  .lines{ position:absolute; top:0; left:0; width:8.5in; height:11in; }
+
+  .howto{
+    position:absolute;
+    left:0; right:0; bottom:0.18in;
+    text-align:center;
+    font-size:8pt;
+    color:#888;
+  }
+
+  @media screen{
+    body{ background:#d8d8d8; padding:0.25in 0; }
+    .page{ margin:0 auto 0.25in; box-shadow:0 2px 10px rgba(0,0,0,.35); }
+  }
+  @media print{
+    @page{ size:letter; margin:0; }
+    body{ background:#fff; padding:0; }
+    .page{ margin:0; box-shadow:none; }
+  }
+</style>
+</head>
+<body>
+<script>
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const COLS = 3, ROWS = 3, PER_PAGE = COLS * ROWS;
+const CELL_W = 8.5 / COLS, CELL_H = 11 / ROWS, CUT_W = 0.016;
+
+/* Challenge text uses only words found on the Command Sheet.
+   adv:true challenges need the optional Advanced commands (page 2). */
+const CHALLENGES = [
+  { d:'Easy', t:'Pick up the ball and put it in the box.' },
+  { d:'Easy', t:'Point at the nearest human and beep.' },
+  { d:'Easy', t:'Raise both arms, then lower them.' },
+  { d:'Easy', t:'Look at the nearest human and beep.' },
+  { d:'Easy', t:'Stand up, then sit down.' },
+  { d:'Easy', t:'Wave with your right hand.' },
+  { d:'Easy', t:'Nod, then shake your head.' },
+  { d:'Easy', t:'Freeze, then beep.' },
+  { d:'Easy', t:'Walk to the table.' },
+
+  { d:'Medium', t:'Pick up the cup and hand it to the person on your right.' },
+  { d:'Medium', t:'Walk to the table and put the ball on it.' },
+  { d:'Medium', t:'Grasp the object in front and release it into the box.' },
+  { d:'Medium', t:'Turn around, then walk to the door.' },
+  { d:'Medium', t:'Raise your right arm and point at the nearest human.' },
+  { d:'Medium', t:'Look up, look down, and beep.' },
+  { d:'Medium', t:'Pick up the hat and put it on your head.' },
+  { d:'Medium', t:'Walk to the door and open it.' },
+  { d:'Medium', t:'Hand the ball to the nearest human.' },
+
+  { d:'Hard', t:'Put on the jacket, then zip it up.' },
+  { d:'Hard', t:'Get the hat onto someone\u2019s head without touching them.' },
+  { d:'Hard', t:'Pick up the ball, turn around, and put it on the nearest surface.' },
+  { d:'Hard', t:'Hand the cup to every human in the room, one at a time.' },
+  { d:'Hard', t:'Walk to the table, pick up the glass, and return it to your starting spot.' },
+  { d:'Hard', t:'Put on the jacket, walk to the nearest human, and wave.' },
+
+  { d:'Advanced', adv:true, t:'While there is no obstacle, walk to the table.' },
+  { d:'Advanced', adv:true, t:'If you hear a sound, beep.' },
+  { d:'Advanced', adv:true, t:'While the distance is under 6 inches, freeze.' }
+];
+
+function svg(name, attrs){
+  const n = document.createElementNS(SVG_NS, name);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  return n;
+}
+function make(tag, cls){
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  return n;
+}
+function addCutLines(page){
+  const s = svg('svg', { viewBox:'0 0 8.5 11', class:'lines' });
+  for (let c = 1; c < COLS; c++){
+    const x = c * CELL_W;
+    s.appendChild(svg('line', { x1:x, y1:0, x2:x, y2:CELL_H * ROWS, stroke:'#000', 'stroke-width':CUT_W }));
+  }
+  for (let r = 1; r <= ROWS; r++){
+    const y = r * CELL_H;
+    s.appendChild(svg('line', { x1:0, y1:y, x2:8.5, y2:y, stroke:'#000', 'stroke-width':CUT_W }));
+  }
+  page.appendChild(s);
+}
+
+const pages = Math.ceil(CHALLENGES.length / PER_PAGE);
+for (let p = 0; p < pages; p++){
+  const page = make('div', 'page');
+  const grid = make('div', 'grid');
+  for (let i = 0; i < PER_PAGE; i++){
+    const cell = make('div', 'cell');
+    const ch = CHALLENGES[p * PER_PAGE + i];
+    if (ch){
+      const slip = make('div', 'slip');
+      const tag = make('div', 'tag'); tag.textContent = ch.d;
+      const num = make('div', 'num'); num.textContent = (p * PER_PAGE + i) + 1;
+      const text = make('div', 'text'); text.textContent = ch.t;
+      slip.appendChild(tag);
+      slip.appendChild(num);
+      slip.appendChild(text);
+      if (ch.adv){ const a = make('div', 'adv'); a.textContent = 'needs Advanced commands'; slip.appendChild(a); }
+      cell.appendChild(slip);
+    }
+    grid.appendChild(cell);
+  }
+  page.appendChild(grid);
+  addCutLines(page);
+  if (p === 0){
+    const h = make('div', 'howto');
+    h.textContent = 'Cut apart. Keep the Challenge hidden from the Robot.';
+    page.appendChild(h);
+  }
+  document.body.appendChild(page);
+}
+</script>
+</body>
+</html>

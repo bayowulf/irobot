@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iRobot — Command Sheet</title>
+<style>
+  :root{ --ink:#111; --line:#111; --muted:#666; }
+  *{ box-sizing:border-box; }
+  html, body{ margin:0; padding:0; }
+  body{ font-family:"Segoe UI", Arial, Helvetica, sans-serif; color:var(--ink); }
+
+  .sheet{
+    position:relative;
+    width:8.5in;
+    height:11in;
+    padding:0.34in 0.36in 0.3in;
+    overflow:hidden;
+    background:#fff;
+    page-break-after:always;
+    break-after:page;
+  }
+  .sheet:last-of-type{ page-break-after:auto; break-after:auto; }
+
+  .masthead{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    border-bottom:0.03in solid var(--line);
+    padding-bottom:0.06in;
+    margin-bottom:0.12in;
+  }
+  .masthead h1{ font-size:20pt; margin:0; letter-spacing:.4px; }
+  .masthead .sub{ font-size:9pt; color:var(--muted); text-align:right; line-height:1.25; }
+
+  .note{
+    font-size:8pt;
+    color:var(--muted);
+    margin:0 0 0.12in;
+    line-height:1.3;
+  }
+
+  .cols{ column-count:3; column-gap:0.22in; }
+  .group{ break-inside:avoid; margin:0 0 0.13in; }
+  .group h3{
+    font-size:8pt; margin:0 0 0.05in; letter-spacing:.6px;
+    text-transform:uppercase; color:#fff; background:var(--ink);
+    display:inline-block; padding:0.018in 0.06in; border-radius:2px;
+  }
+  .chips{ display:flex; flex-wrap:wrap; gap:0.045in; }
+  .chip{
+    font-size:7.4pt; font-weight:700; line-height:1.05;
+    border:0.012in solid var(--line); border-radius:3px;
+    padding:0.03in 0.05in; white-space:nowrap;
+  }
+  .chip .fill{ font-weight:400; font-style:italic; color:var(--muted); }
+
+  /* page 2 */
+  .two-col{ column-count:2; column-gap:0.28in; }
+  table.defaults{ width:100%; border-collapse:collapse; font-size:7.6pt; }
+  table.defaults th{
+    text-align:left; background:var(--ink); color:#fff;
+    font-size:7.4pt; letter-spacing:.5px; text-transform:uppercase;
+    padding:0.03in 0.05in;
+  }
+  table.defaults td{
+    border-bottom:0.01in solid #bbb; padding:0.035in 0.05in; vertical-align:top; line-height:1.2;
+  }
+  table.defaults td:first-child{ font-weight:700; white-space:nowrap; width:37%; }
+
+  .banner{
+    font-size:8pt; line-height:1.3; border:0.02in solid var(--line);
+    border-radius:4px; padding:0.07in 0.09in; margin:0 0 0.14in;
+  }
+  .banner b{ text-transform:uppercase; letter-spacing:.4px; }
+
+  @media screen{
+    body{ background:#d8d8d8; padding:0.25in 0; }
+    .sheet{ margin:0 auto 0.25in; box-shadow:0 2px 10px rgba(0,0,0,.35); }
+  }
+  @media print{
+    @page{ size:letter; margin:0; }
+    body{ background:#fff; padding:0; }
+    .sheet{ margin:0; box-shadow:none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================ PAGE 1 — COMMANDS ============================ -->
+<section class="sheet">
+  <div class="masthead">
+    <h1>iRobot · COMMAND SHEET</h1>
+    <div class="sub">Say only these words, one command at a time,<br>then pass to the next Controller. Robot says <b>COMPLETE</b>.</div>
+  </div>
+
+  <p class="note"><b>Bracketed words <span style="font-style:italic">[like this]</span> are placeholders</b> — fill them from the TARGETS group or from the room. Anything not printed here may not be spoken.</p>
+
+  <div class="cols">
+
+    <div class="group">
+      <h3>Posture / Body</h3>
+      <div class="chips">
+        <span class="chip">STAND UP</span>
+        <span class="chip">SIT DOWN</span>
+        <span class="chip">CROUCH</span>
+        <span class="chip">KNEEL</span>
+        <span class="chip">LIE DOWN</span>
+        <span class="chip">FREEZE</span>
+        <span class="chip">RESET</span>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Locomotion</h3>
+      <div class="chips">
+        <span class="chip">GO FORWARD</span>
+        <span class="chip">GO BACKWARD</span>
+        <span class="chip">STEP LEFT</span>
+        <span class="chip">STEP RIGHT</span>
+        <span class="chip">SIDESTEP LEFT</span>
+        <span class="chip">SIDESTEP RIGHT</span>
+        <span class="chip">TURN LEFT</span>
+        <span class="chip">TURN RIGHT</span>
+        <span class="chip">TURN AROUND</span>
+        <span class="chip">WALK TO <span class="fill">[target]</span></span>
+        <span class="chip">STOP</span>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Parameters</h3>
+      <div class="chips">
+        <span class="chip">ONE STEP</span>
+        <span class="chip"><span class="fill">[N]</span> STEPS</span>
+        <span class="chip">45 DEGREES</span>
+        <span class="chip">90 DEGREES</span>
+        <span class="chip">180 DEGREES</span>
+        <span class="chip">SLOWLY</span>
+        <span class="chip">QUICKLY</span>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Head / Gaze</h3>
+      <div class="chips">
+        <span class="chip">LOOK UP</span>
+        <span class="chip">LOOK DOWN</span>
+        <span class="chip">TURN HEAD LEFT</span>
+        <span class="chip">TURN HEAD RIGHT</span>
+        <span class="chip">LOOK AT <span class="fill">[target]</span></span>
+        <span class="chip">NOD</span>
+        <span class="chip">SHAKE HEAD</span>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Arms</h3>
+      <div class="chips">
+        <span class="chip">RAISE LEFT ARM</span>
+        <span class="chip">RAISE RIGHT ARM</span>
+        <span class="chip">RAISE BOTH ARMS</span>
+        <span class="chip">LOWER LEFT ARM</span>
+        <span class="chip">LOWER RIGHT ARM</span>
+        <span class="chip">LOWER BOTH ARMS</span>
+        <span class="chip">REACH FOR <span class="fill">[target]</span></span>
+        <span class="chip">POINT AT <span class="fill">[target]</span></span>
+        <span class="chip">WAVE</span>
+        <span class="chip">FOLD ARMS</span>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Hands / Manipulation</h3>
+      <div class="chips">
+        <span class="chip">OPEN HAND</span>
+        <span class="chip">CLOSE HAND</span>
+        <span class="chip">GRASP <span class="fill">[target]</span></span>
+        <span class="chip">RELEASE</span>
+        <span class="chip">PICK UP <span class="fill">[target]</span></span>
+        <span class="chip">PUT DOWN <span class="fill">[target]</span></span>
+        <span class="chip">HAND <span class="fill">[target]</span> TO <span class="fill">[person]</span></span>
+        <span class="chip">PUSH</span>
+        <span class="chip">PULL</span>
+        <span class="chip">OPEN <span class="fill">[target]</span></span>
+        <span class="chip">CLOSE <span class="fill">[target]</span></span>
+        <span class="chip">ZIP UP</span>
+        <span class="chip">UNZIP</span>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Voice / State</h3>
+      <div class="chips">
+        <span class="chip">BEEP</span>
+        <span class="chip">SAY <span class="fill">[word]</span></span>
+        <span class="chip">WAIT <span class="fill">[N]</span></span>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Targets</h3>
+      <div class="chips">
+        <span class="chip">THE BALL</span>
+        <span class="chip">THE CUP</span>
+        <span class="chip">THE GLASS</span>
+        <span class="chip">THE BOX</span>
+        <span class="chip">THE HAT</span>
+        <span class="chip">THE JACKET</span>
+        <span class="chip">THE DOOR</span>
+        <span class="chip">THE TABLE</span>
+        <span class="chip">THE LIGHT</span>
+        <span class="chip">NEAREST HUMAN</span>
+        <span class="chip">NEAREST SURFACE</span>
+        <span class="chip">OBJECT IN FRONT</span>
+        <span class="chip">MY OTHER HAND</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= PAGE 2 — DEFAULT BEHAVIORS + ADVANCED ================= -->
+<section class="sheet">
+  <div class="masthead">
+    <h1>iRobot · REFERENCE</h1>
+    <div class="sub">Fallback meanings &amp; the optional Advanced layer.<br>Print only if you want them.</div>
+  </div>
+
+  <div class="banner">
+    <b>The ambiguity rule.</b> The Robot does not know the Challenge and may not ask for
+    clarification. When a command has more than one reading, the Robot picks the reading
+    that makes sense, <b>announces it once</b>, and keeps it for the round. Use this table
+    as the fallback if the Robot would rather not invent one. Acting in bad faith to fail
+    or to secretly help is not allowed.
+  </div>
+
+  <h2 style="font-size:11pt;margin:0 0 0.06in;">Default Robot Behaviors</h2>
+  <table class="defaults">
+    <thead><tr><th>Said without…</th><th>Robot does</th></tr></thead>
+    <tbody>
+      <tr><td>TURN LEFT / RIGHT</td><td>A quarter turn (90°), turning the whole body in place.</td></tr>
+      <tr><td>an amount of degrees</td><td>Use 90 DEGREES.</td></tr>
+      <tr><td>TURN HEAD LEFT / RIGHT</td><td>Turn only the head 90°; the body stays still.</td></tr>
+      <tr><td>LOOK UP / DOWN</td><td>Move only the eyes; the head stays still.</td></tr>
+      <tr><td>GO FORWARD / BACKWARD</td><td>One step.</td></tr>
+      <tr><td>STEP LEFT / RIGHT</td><td>One sidestep.</td></tr>
+      <tr><td>SIDESTEP LEFT / RIGHT</td><td>One sidestep without turning to face it.</td></tr>
+      <tr><td>TURN AROUND</td><td>Turn 180° in place.</td></tr>
+      <tr><td>a named hand</td><td>Use the active hand (right, unless a command just used the left).</td></tr>
+      <tr><td>OPEN / CLOSE HAND</td><td>Open or close the active hand. CLOSE HAND makes a fist.</td></tr>
+      <tr><td>a target on GRASP</td><td>Close the active hand on empty air.</td></tr>
+      <tr><td>a target on PICK UP</td><td>Grasp the object in front, then lift it 6 inches.</td></tr>
+      <tr><td>a target on PUT DOWN</td><td>Lower whatever you hold to the nearest surface, then release.</td></tr>
+      <tr><td>RELEASE</td><td>Open whichever hand is holding something; otherwise the active hand.</td></tr>
+      <tr><td>PUSH / PULL</td><td>Push or pull with the active hand, about one step.</td></tr>
+      <tr><td>a word on SAY</td><td>Say “beep.”</td></tr>
+      <tr><td>seconds on WAIT</td><td>Wait 3 seconds.</td></tr>
+      <tr><td>NOD / SHAKE HEAD</td><td>One motion only.</td></tr>
+      <tr><td>WAVE</td><td>Wave the active hand twice.</td></tr>
+      <tr><td>STOP</td><td>Stop moving; stay stopped until a later command moves you.</td></tr>
+      <tr><td>FREEZE</td><td>Hold your exact pose until the next command.</td></tr>
+      <tr><td>RESET</td><td>Return to the starting spot and facing, in your starting posture.</td></tr>
+      <tr><td>a target anywhere</td><td>The object in front if there is one; otherwise empty air.</td></tr>
+    </tbody>
+  </table>
+
+  <h2 style="font-size:11pt;margin:0.16in 0 0.06in;">Advanced Commands <span style="font-size:8pt;color:#666;font-weight:400;">(optional — use with the Advanced Challenges)</span></h2>
+  <div class="chips" style="margin-bottom:0.1in;">
+    <span class="chip">REPEAT <span class="fill">[N]</span> TIMES</span>
+    <span class="chip">IF / THEN</span>
+    <span class="chip">ELSE</span>
+    <span class="chip">WHILE</span>
+    <span class="chip">TOUCH SENSOR = PRESSED</span>
+    <span class="chip">HEAR SOUND = YES</span>
+    <span class="chip">DISTANCE &lt; 6 INCHES</span>
+    <span class="chip">NO OBSTACLE</span>
+  </div>
+  <p class="note" style="margin:0;">
+    A sensor is said right after IF / THEN or WHILE, then the block is spoken once and
+    repeated the stated number of times. Example: <b>REPEAT 3 TIMES — RAISE RIGHT ARM — LOWER RIGHT ARM.</b>
+  </p>
+</section>
+
+</body>
+</html>
