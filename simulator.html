@@ -529,7 +529,7 @@ function simulate(cfg){
     deck: deckCounts(cfg), plays:{}, jokersUsed:0, targetsUsed:0, sensorsUsed:0, repeatBlocks:0, cardShortages:0, buildTimeouts:0,
     rounds:[], errors:{syntax:0,runtime:0,missed:0,safety:0},
     buzz:{used:0,refunded:0,missed:0}, overrule:0, glitch:0, compilerCards:0, completed:0, timeout:0, bonus:0,
-    rollbacks:0, patches:0, buzzCards:0,
+    rollbacks:0, patches:0, buzzCards:0, wheelsApplied:0, wheelsFizzled:0,
     challenges:{}, openings:{},
     time:{draft:0, read:0, execute:0, move:0, arm:0, stand:0, gap:0, buzz:0, freeze:0}
   };
@@ -682,6 +682,7 @@ function simulate(cfg){
     let complete = !truncated;
     let executed = 0;
     let lastCmd = null;
+    let slipPending = false;
     curRound = round;
     for (let i=0;i<cmds.length;i++){
       if (remaining <= 0){ break; }
@@ -713,21 +714,24 @@ function simulate(cfg){
       }
       const actionWord = item.a;
       const targetWord = item.target;
-      let skipCmd = false, mult = 1, addT = 0, corrupt = false, slip = false;
+      let skipCmd = false, mult = 1, addT = 0, corrupt = false;
       if (status.glitch && status.cmdsLeft > 0){
         const ge = GLITCH_EFFECT[status.glitch];
         if (ge.mult) mult *= ge.mult;
         if (ge.add) addT += ge.add;
         if (ge.skip) skipCmd = true;
-        if (ge.slip) slip = true;
+        if (ge.slip) slipPending = true;
         if (ge.corrupt) corrupt = true;
         status.cmdsLeft--;
         if (status.cmdsLeft <= 0) status.glitch = null;
       }
       let paramWord = item.paramWord;
-      if (slip){
-        if (paramWord === "LEFT") paramWord = "RIGHT";
-        else if (paramWord === "RIGHT") paramWord = "LEFT";
+      if (slipPending && (paramWord === "LEFT" || paramWord === "RIGHT" || paramWord === "FORWARD")){
+        const rev = paramWord === "LEFT" ? "RIGHT" : (paramWord === "RIGHT" ? "LEFT" : "BACKWARDS");
+        push("glitch", `WHEELS SLIP — "${[actionWord, paramWord, targetWord].filter(Boolean).join(" ")}" becomes "${[actionWord, rev, targetWord].filter(Boolean).join(" ")}"; the Robot moves in reverse.`, {stackIndex:i, posture});
+        paramWord = rev;
+        slipPending = false;
+        analytics.wheelsApplied++;
       }
       const cmd = [actionWord, paramWord, targetWord].filter(Boolean).join(" ");
 
@@ -815,6 +819,12 @@ function simulate(cfg){
       }
     }
 
+    if (slipPending){
+      push("glitch", `WHEELS SLIP fizzled — no direction left to reverse.`);
+      slipPending = false;
+      analytics.wheelsFizzled++;
+    }
+
     if (posture === "standing"){
       const sitTime = TIMING.SIT * robotP.mobility * rng.jit(0.10);
       analytics.time.stand += sitTime;
@@ -877,7 +887,7 @@ function buildDiagnostics(A){
   const avgUsed = A.rounds.length ? A.rounds.reduce((s,r)=>s+r.used,0)/A.rounds.length : 0;
   out.push(`<b>Assembly:</b> ${A.rounds.length} round(s) built; ${A.buildTimeouts} hit the 45s build timer; ${A.cardShortages} card shortage(s); ${A.jokersUsed} Joker(s), ${A.targetsUsed} Target(s), ${A.repeatBlocks} REPEAT block(s) used.`);
   out.push(`<b>Speed bonus:</b> ${A.bonus} token(s) earned from finishing with time to spare.`);
-  if (A.rollbacks || A.patches || A.buzzCards) out.push(`<b>Compiler cards:</b> ROLLBACK ${A.rollbacks||0} · PATCH ${A.patches||0} · BUZZER ${A.buzzCards||0}.`);
+  if (A.rollbacks || A.patches || A.buzzCards) out.push(`<b>Compiler cards:</b> ROLLBACK ${A.rollbacks||0} · PATCH ${A.patches||0} · BUZZER ${A.buzzCards||0} · WHEELS SLIP ${A.wheelsApplied||0} applied / ${A.wheelsFizzled||0} fizzled.`);
   const unused = Object.keys(A.deck).filter(w => !(A.plays[w] > 0));
   if (unused.length) out.push(`<b>Never played:</b> ${unused.join(", ")}. With the full deck, these are unused rather than undrawable — consider whether they earn their place.`);
   if (A.openings){
@@ -1205,7 +1215,7 @@ function renderAnalytics(){
     </div>`;
 }
 
-const SIM_VERSION = "0.7.2";
+const SIM_VERSION = "0.7.3";
 
 function logLines(){
   return (ui.tape || []).map(ev => {
@@ -1259,7 +1269,7 @@ function download(name, text){
 function aggregateRuns(runs){
   const A = {
     sessions: runs.length, rounds:0, completed:0, timeouts:0, buildTimeouts:0, bonus:0,
-    rollbacks:0, patches:0, buzzCards:0,
+    rollbacks:0, patches:0, buzzCards:0, wheelsApplied:0, wheelsFizzled:0,
     cardShortages:0, jokersUsed:0, targetsUsed:0, sensorsUsed:0, repeatBlocks:0,
     winners:{A:0,B:0,tie:0}, tokens:{A:0,B:0}, marginSum:0,
     usedSum:0, usedCount:0,
@@ -1274,6 +1284,7 @@ function aggregateRuns(runs){
     A.rounds += a.rounds.length; A.completed += a.completed; A.timeouts += a.timeout;
     A.bonus += a.bonus||0;
     A.rollbacks += a.rollbacks||0; A.patches += a.patches||0; A.buzzCards += a.buzzCards||0;
+    A.wheelsApplied += a.wheelsApplied||0; A.wheelsFizzled += a.wheelsFizzled||0;
     A.buildTimeouts += a.buildTimeouts||0; A.cardShortages += a.cardShortages||0;
     A.jokersUsed += a.jokersUsed||0; A.targetsUsed += a.targetsUsed||0;
     A.sensorsUsed += a.sensorsUsed||0; A.repeatBlocks += a.repeatBlocks||0;
@@ -1311,7 +1322,7 @@ function buildAggregateDiagnostics(A){
   out.push(`<b>Wins:</b> Team A ${A.winners.A} · Team B ${A.winners.B} · ties ${A.winners.tie}. Avg tokens A ${A.avgTokensA.toFixed(1)}, B ${A.avgTokensB.toFixed(1)} · avg margin ${A.avgMargin.toFixed(1)}.`);
   out.push(`<b>Time:</b> average round spends ${A.avgUsed.toFixed(1)}s executing of the 60s budget.`);
   out.push(`<b>Assembly:</b> ${A.jokersUsed} Joker(s) · ${A.targetsUsed} Target(s) · ${A.repeatBlocks} REPEAT block(s) · ${A.cardShortages} card shortage(s) · ${A.bonus} speed bonus token(s).`);
-  out.push(`<b>Compiler cards:</b> ROLLBACK ${A.rollbacks} · PATCH ${A.patches} · BUZZER ${A.buzzCards}.`);
+  out.push(`<b>Compiler cards:</b> ROLLBACK ${A.rollbacks} · PATCH ${A.patches} · BUZZER ${A.buzzCards} · WHEELS SLIP ${A.wheelsApplied||0} applied / ${A.wheelsFizzled||0} fizzled.`);
   {
     const ops = Object.entries(A.openings).sort((a,b)=>b[1]-a[1]);
     const total = ops.reduce((s,e)=>s+e[1],0);

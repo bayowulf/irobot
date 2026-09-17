@@ -8,7 +8,7 @@
 ![Play time: 30-60 min](https://img.shields.io/badge/PLAY_TIME-30--60_MIN-blue?style=for-the-badge)
 ![Ages: 9+](https://img.shields.io/badge/AGES-9%2B-orange?style=for-the-badge)
 ![Format: Print & Play](https://img.shields.io/badge/FORMAT-PRINT_%26_PLAY-brightgreen?style=for-the-badge)
-![Version: v0.7.2](https://img.shields.io/badge/VERSION-v0.7.2-informational?style=for-the-badge)
+![Version: v0.7.3](https://img.shields.io/badge/VERSION-v0.7.3-informational?style=for-the-badge)
 
 **Share link:** https://github.com/bayowulf/irobot
 
