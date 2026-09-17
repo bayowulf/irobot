@@ -231,14 +231,14 @@ const GLITCH_DECK = [
 const COMPILER_CARDS = ["BUZZER","BUG INJECTION","BUG INJECTION","PATCH","ROLLBACK"];
 
 const GLITCH_EFFECT = {
-  "LOW BATTERY":{cmds:3,mult:1.8,txt:"Command timing ×1.8 for 3 commands."},
-  "SENSOR MALFUNCTION":{cmds:1,skip:true,txt:"Next command ignored."},
-  "WHEELS SLIP":{cmds:1,mult:1.5,txt:"Next direction executed in reverse."},
-  "LANGUAGE CORRUPTED":{cmds:4,add:0.3,txt:"Every sentence ends in “beep.”"},
-  "FIRMWARE UPDATE":{cmds:1,add:5,txt:"Robot freezes for 5 seconds."},
-  "DEJA VU":{cmds:1,add:1.6,txt:"Repeat last executed command."},
-  "OVERHEAT":{cmds:1,add:2,txt:"Fan yourself with both hands."},
-  "SOFTWARE UPDATE":{cmds:1,add:1.5,txt:"Hum until the next card."}
+  "LOW BATTERY":{cmds:3,mult:1.8,txt:"speaks in slow motion"},
+  "SENSOR MALFUNCTION":{cmds:1,skip:true,txt:"ignores the next command"},
+  "WHEELS SLIP":{cmds:1,slip:true,txt:"executes the next direction in reverse"},
+  "LANGUAGE CORRUPTED":{cmds:4,corrupt:true,add:0.3,txt:"ends every sentence with “beep”"},
+  "FIRMWARE UPDATE":{cmds:1,freeze:5,txt:"freezes for 5 seconds"},
+  "DEJA VU":{cmds:1,repeat:true,txt:"repeats its last command"},
+  "OVERHEAT":{cmds:1,fan:2,txt:"fans itself with both hands"},
+  "SOFTWARE UPDATE":{cmds:1,hum:1.5,txt:"hums until the next card"}
 };
 
 const PLAYERS = {
@@ -622,18 +622,29 @@ function simulate(cfg){
       if (remaining <= 0){ break; }
       const item = cmds[i];
       const actionWord = item.a;
-      const paramWord = item.paramWord;
       const targetWord = item.target;
-      const cmd = [actionWord, paramWord, targetWord].filter(Boolean).join(" ");
-
-      let skipCmd = false, mult = 1, addT = 0;
+      let skipCmd = false, mult = 1, addT = 0, corrupt = false, slip = false, deja = false;
       if (status.glitch && status.cmdsLeft > 0){
-        const ge = GLITCH_EFFECT[status.glitch];
+        const g = status.glitch, ge = GLITCH_EFFECT[g];
         if (ge.mult) mult *= ge.mult;
         if (ge.add) addT += ge.add;
         if (ge.skip) skipCmd = true;
+        if (ge.slip) slip = true;
+        if (ge.corrupt) corrupt = true;
+        if (ge.repeat) deja = true;
         status.cmdsLeft--;
+        if (status.cmdsLeft <= 0) status.glitch = null;
+        push("glitch", `GLITCH "${g}" — the Robot ${ge.txt}.`, {stackIndex:i, posture});
+        if (ge.freeze) wait(ge.freeze);
+        else if (ge.fan) wait(ge.fan);
+        else if (ge.hum) wait(ge.hum);
       }
+      let paramWord = item.paramWord;
+      if (slip){
+        if (paramWord === "LEFT") paramWord = "RIGHT";
+        else if (paramWord === "RIGHT") paramWord = "LEFT";
+      }
+      const cmd = [actionWord, paramWord, targetWord].filter(Boolean).join(" ");
 
       const risky = ["MOVE","ROTATE","SPIN"].includes(actionWord);
       if (risky && rng.chance(0.04)){
@@ -648,13 +659,12 @@ function simulate(cfg){
       const words = actionWord.split(" ").length + (paramWord?2:0) + (targetWord?2:0);
       const readTime = (searchTime(i, reader, rng) + perceive(reader, options, rng) + speakTime(words, reader) + deliberate(reader, rng)) * mult + addT;
       analytics.time.read += readTime;
-      push("read", `${reader.name} reads "${cmd}" verbatim.`, {stackIndex:i, card:actionWord, posture});
+      const readText = corrupt ? `${cmd} beep` : cmd;
+      push("read", `${reader.name} reads "${readText}" verbatim.`, {stackIndex:i, card:actionWord, posture});
       wait(readTime);
 
       if (skipCmd){
-        push("glitch", `SENSOR MALFUNCTION — the Robot ignores "${cmd}" entirely.`, {stackIndex:i});
         wait(0.6);
-        status.glitch = null;
         continue;
       }
 
@@ -692,6 +702,15 @@ function simulate(cfg){
       const gap = TIMING.BEAT + turnGap(reader, rng);
       analytics.time.gap += gap;
       wait(gap);
+
+      if (deja){
+        const at2 = actionTime(actionWord, paramWord, item, robotP, rng);
+        push("glitch", `DEJA VU — ${robotP.name} repeats "${cmd}".`, {stackIndex:i, posture});
+        wait(at2.t);
+        analytics.time.execute += at2.t;
+        push("beep", `${robotP.name} beeps: "COMPLETE".`, {stackIndex:i, card:actionWord, posture});
+        wait(TIMING.BEAT + turnGap(reader, rng));
+      }
     }
 
     if (posture === "standing"){
@@ -1061,7 +1080,7 @@ function renderAnalytics(){
     </div>`;
 }
 
-const SIM_VERSION = "0.6.1";
+const SIM_VERSION = "0.6.2";
 
 function logLines(){
   return (ui.tape || []).map(ev => {
