@@ -6,7 +6,7 @@ const path = require("path");
 
 const ROOT = __dirname;
 const HTML = path.join(ROOT, "simulator.html");
-const VERSION = "0.6.0";
+const VERSION = "0.6.1";
 
 function makeEl(){
   const el = {

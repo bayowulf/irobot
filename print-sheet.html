@@ -126,6 +126,7 @@ const ICONS = {
   person: `<circle cx="50" cy="26" r="13"/><path d="M22 88 v-8 a28 28 0 0 1 56 0 v8"/>`,
   two_hands: `<path d="M14 58 v-14 M24 58 v-22 M34 58 v-22 M44 58 v-14"/><path d="M14 58 h30 v6 a16 16 0 0 1 -16 16 h-2 a12 12 0 0 1 -12 -12 z"/><path d="M56 58 v-14 M66 58 v-22 M76 58 v-22 M86 58 v-14"/><path d="M56 58 h30 v6 a16 16 0 0 1 -16 16 h-2 a12 12 0 0 1 -12 -12 z"/>`,
   cup: `<path d="M30 22 h40 l-6 60 h-28 z"/><line x1="34" y1="40" x2="66" y2="40"/>`,
+  hat: `<path d="M26 58 h48 l6 16 h-60 z"/><path d="M34 58 v-16 a16 16 0 0 1 32 0 v16"/>`,
   ball: `<circle cx="50" cy="50" r="32"/><path d="M22 66 a34 34 0 0 1 0 -32"/>`,
   box: `<path d="M22 38 L50 24 L78 38 L50 52 Z"/><path d="M22 38 V66 L50 80 V52"/><path d="M78 38 V66 L50 80"/>`,
   ruler: `<rect x="12" y="36" width="76" height="28" rx="3"/><line x1="24" y1="36" x2="24" y2="50"/><line x1="36" y1="36" x2="36" y2="56"/><line x1="48" y1="36" x2="48" y2="50"/><line x1="60" y1="36" x2="60" y2="56"/><line x1="72" y1="36" x2="72" y2="50"/>`,
@@ -192,8 +193,10 @@ const CARDS = [
   {cat:'green', word:'NEAREST HUMAN',    icon:'person',    count:2},
   {cat:'green', word:'MY OTHER HAND',    icon:'two_hands', count:1},
   {cat:'green', word:'THE GLASS',        icon:'cup',       count:1},
+  {cat:'green', word:'THE CUP',          icon:'cup',       count:1},
   {cat:'green', word:'THE BALL',         icon:'ball',      count:1},
   {cat:'green', word:'THE BOX',          icon:'box',       count:1},
+  {cat:'green', word:'THE HAT',          icon:'hat',       count:1},
   /* Yellow — Sensor */
   {cat:'yellow', word:'DISTANCE < 6 INCHES',   icon:'ruler',      count:1},
   {cat:'yellow', word:'TOUCH SENSOR = PRESSED',icon:'tap',        count:1},

@@ -361,9 +361,11 @@ Compiler.
 | 2 | NEAREST SURFACE | table | Base |
 | 2 | NEAREST HUMAN | person | Base |
 | 1 | MY OTHER HAND | two hands | Base |
-| 1 | THE GLASS | cup | Base |
+| 1 | THE GLASS | tumbler | Base |
+| 1 | THE CUP | cup | Base |
 | 1 | THE BALL | circle | Base |
 | 1 | THE BOX | box | Base |
+| 1 | THE HAT | hat | Base |
 
 > **Targets are optional modifiers.** Place one beside an Action to specify *what* it acts
 > on. With no Target, the Robot uses the literal default (`GRASP` = closed fist).

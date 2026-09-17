@@ -206,13 +206,14 @@ const CAT = {
 
 const DECK_SPEC = [
   ["action","MOVE",4],["action","ROTATE",3],["action","RAISE ARM",2],["action","LOWER ARM",2],
-  ["action","GRASP",3],["action","RELEASE",2],["action","POINT",1],["action","LOOK",1],
+  ["action","GRASP",3],["action","RELEASE",3],["action","POINT",1],["action","LOOK",1],
   ["action","BEEP",1],["action","FREEZE",1],["action","SPIN",1],
   ["action","OPEN MOUTH",1],["action","CLOSE EYES",1],
   ["param","1 STEP",3],["param","2 STEPS",2],["param","90 DEGREES",2],["param","180 DEGREES",1],
   ["param","LEFT",3],["param","RIGHT",3],["param","FORWARD",1],["param","SPEED 50%",1],
   ["target","OBJECT IN FRONT",2],["target","NEAREST SURFACE",2],["target","NEAREST HUMAN",2],
   ["target","MY OTHER HAND",1],["target","THE GLASS",1],["target","THE BALL",1],["target","THE BOX",1],
+  ["target","THE CUP",1],["target","THE HAT",1],
   ["sensor","DISTANCE < 6 INCHES",1],["sensor","TOUCH SENSOR = PRESSED",1],
   ["sensor","HEAR SOUND = YES",1],["sensor","NO OBSTACLE",1]
 ];
@@ -267,51 +268,51 @@ const STAND_ACTIONS = new Set(["MOVE","ROTATE","SPIN"]);
 
 const CHALLENGES = [
   {id:1,diff:"easy",text:"Pick up the ball and put it in the box.",sigs:[
-    [{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}],
-    [{a:"MOVE",p:"dist"},{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}]]},
+    [{a:"GRASP",t:"THE BALL"},{a:"MOVE",p:"dist"},{a:"RELEASE",t:"THE BOX"}],
+    [{a:"MOVE",p:"dist"},{a:"GRASP",t:"THE BALL"},{a:"MOVE",p:"dist"},{a:"RELEASE",t:"THE BOX"}]]},
   {id:2,diff:"easy",text:"Point at the nearest human and beep.",sigs:[
-    [{a:"POINT"},{a:"BEEP"}],
-    [{a:"LOOK"},{a:"POINT"},{a:"BEEP"}],
-    [{a:"ROTATE",p:"angle"},{a:"POINT"},{a:"BEEP"}]]},
+    [{a:"POINT",t:"NEAREST HUMAN"},{a:"BEEP"}],
+    [{a:"LOOK",t:"NEAREST HUMAN"},{a:"POINT",t:"NEAREST HUMAN"},{a:"BEEP"}],
+    [{a:"ROTATE",p:"angle"},{a:"POINT",t:"NEAREST HUMAN"},{a:"BEEP"}]]},
   {id:3,diff:"easy",text:"Pick up the cup and hand it to the person on your right.",sigs:[
-    [{a:"ROTATE",p:"angle"},{a:"GRASP"},{a:"RELEASE"}],
-    [{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}]]},
+    [{a:"ROTATE",p:"angle"},{a:"GRASP",t:"THE CUP"},{a:"RELEASE",t:"NEAREST HUMAN"}],
+    [{a:"GRASP",t:"THE CUP"},{a:"MOVE",p:"dist"},{a:"RELEASE",t:"NEAREST HUMAN"}]]},
   {id:4,diff:"easy",text:"Raise both arms, then lower them.",sigs:[
     [{a:"RAISE ARM"},{a:"LOWER ARM"}]]},
   {id:5,diff:"easy",text:"Look at the nearest human and beep.",sigs:[
-    [{a:"LOOK"},{a:"BEEP"}]]},
+    [{a:"LOOK",t:"NEAREST HUMAN"},{a:"BEEP"}]]},
   {id:6,diff:"easy",text:"Rotate to face the nearest surface and point at it.",sigs:[
-    [{a:"ROTATE",p:"angle"},{a:"POINT"}],
-    [{a:"LOOK"},{a:"ROTATE",p:"angle"},{a:"POINT"}]]},
+    [{a:"ROTATE",p:"angle"},{a:"POINT",t:"NEAREST SURFACE"}],
+    [{a:"LOOK",t:"NEAREST SURFACE"},{a:"ROTATE",p:"angle"},{a:"POINT",t:"NEAREST SURFACE"}]]},
   {id:7,diff:"medium",text:"Walk to the table, pick up the empty glass, and set it on the nearest surface.",sigs:[
-    [{a:"MOVE",p:"dist",d:3.0},{a:"GRASP"},{a:"RELEASE"}],
-    [{a:"MOVE",p:"dist",d:3.0},{a:"LOOK"},{a:"GRASP"},{a:"RELEASE"}],
-    [{a:"ROTATE",p:"angle"},{a:"MOVE",p:"dist",d:3.0},{a:"GRASP"},{a:"RELEASE"}]]},
+    [{a:"MOVE",p:"dist",d:3.0,t:"NEAREST SURFACE"},{a:"GRASP",t:"THE GLASS"},{a:"RELEASE",t:"NEAREST SURFACE"}],
+    [{a:"MOVE",p:"dist",d:3.0,t:"NEAREST SURFACE"},{a:"LOOK",t:"THE GLASS"},{a:"GRASP",t:"THE GLASS"},{a:"RELEASE",t:"NEAREST SURFACE"}],
+    [{a:"ROTATE",p:"angle"},{a:"MOVE",p:"dist",d:3.0,t:"NEAREST SURFACE"},{a:"GRASP",t:"THE GLASS"},{a:"RELEASE",t:"NEAREST SURFACE"}]]},
   {id:8,diff:"medium",text:"Put the ball on the table, then hand the cup to a human.",sigs:[
-    [{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"},{a:"GRASP"},{a:"RELEASE"}],
-    [{a:"MOVE",p:"dist"},{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"},{a:"GRASP"},{a:"RELEASE"}]]},
+    [{a:"GRASP",t:"THE BALL"},{a:"MOVE",p:"dist",t:"NEAREST SURFACE"},{a:"RELEASE"},{a:"GRASP",t:"THE CUP"},{a:"MOVE",p:"dist",t:"NEAREST HUMAN"},{a:"RELEASE"}],
+    [{a:"MOVE",p:"dist"},{a:"GRASP",t:"THE BALL"},{a:"MOVE",p:"dist",t:"NEAREST SURFACE"},{a:"RELEASE"},{a:"GRASP",t:"THE CUP"},{a:"MOVE",p:"dist",t:"NEAREST HUMAN"},{a:"RELEASE"}]]},
   {id:9,diff:"medium",text:"Grasp the object in front, rotate 90 degrees, and release it into the box.",sigs:[
-    [{a:"GRASP"},{a:"ROTATE",p:"angle"},{a:"RELEASE"}],
-    [{a:"LOOK"},{a:"GRASP"},{a:"ROTATE",p:"angle"},{a:"RELEASE"}]]},
+    [{a:"GRASP",t:"OBJECT IN FRONT"},{a:"ROTATE",p:"angle"},{a:"RELEASE",t:"THE BOX"}],
+    [{a:"LOOK",t:"OBJECT IN FRONT"},{a:"GRASP",t:"OBJECT IN FRONT"},{a:"ROTATE",p:"angle"},{a:"RELEASE",t:"THE BOX"}]]},
   {id:10,diff:"medium",text:"Touch the nearest human, then point at the nearest surface.",sigs:[
-    [{a:"GRASP"},{a:"POINT"}],
-    [{a:"MOVE",p:"dist"},{a:"GRASP"},{a:"POINT"}]]},
+    [{a:"GRASP",t:"NEAREST HUMAN"},{a:"POINT",t:"NEAREST SURFACE"}],
+    [{a:"MOVE",p:"dist"},{a:"GRASP",t:"NEAREST HUMAN"},{a:"POINT",t:"NEAREST SURFACE"}]]},
   {id:11,diff:"hard",text:"Get the hat onto someone's head without touching them.",sigs:[
-    [{a:"LOOK"},{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}],
-    [{a:"GRASP"},{a:"ROTATE",p:"angle"},{a:"MOVE",p:"dist"},{a:"RELEASE"}]]},
+    [{a:"LOOK",t:"NEAREST HUMAN"},{a:"GRASP",t:"THE HAT"},{a:"MOVE",p:"dist",t:"NEAREST HUMAN"},{a:"RELEASE",t:"NEAREST HUMAN"}],
+    [{a:"GRASP",t:"THE HAT"},{a:"ROTATE",p:"angle"},{a:"MOVE",p:"dist",t:"NEAREST HUMAN"},{a:"RELEASE",t:"NEAREST HUMAN"}]]},
   {id:12,diff:"hard",text:"Pick up the ball, spin 180 degrees, and place it on the nearest surface.",sigs:[
-    [{a:"GRASP"},{a:"SPIN",p:"angle"},{a:"RELEASE"}],
-    [{a:"GRASP"},{a:"ROTATE",p:"angle"},{a:"RELEASE"}]]},
+    [{a:"GRASP",t:"THE BALL"},{a:"SPIN",p:"angle"},{a:"RELEASE",t:"NEAREST SURFACE"}],
+    [{a:"GRASP",t:"THE BALL"},{a:"ROTATE",p:"angle"},{a:"RELEASE",t:"NEAREST SURFACE"}]]},
   {id:13,diff:"hard",text:"Hand the cup to every human in the room, one at a time.",sigs:[
-    [{a:"GRASP"},{a:"MOVE",p:"dist",d:1.5},{a:"RELEASE"},{a:"GRASP"},{a:"MOVE",p:"dist",d:1.5},{a:"RELEASE"}]]},
+    [{a:"GRASP",t:"THE CUP"},{a:"MOVE",p:"dist",d:1.5,t:"NEAREST HUMAN"},{a:"RELEASE"},{a:"GRASP",t:"THE CUP"},{a:"MOVE",p:"dist",d:1.5,t:"NEAREST HUMAN"},{a:"RELEASE"},{a:"GRASP",t:"THE CUP"},{a:"MOVE",p:"dist",d:1.5,t:"NEAREST HUMAN"},{a:"RELEASE"}]]},
   {id:14,diff:"hard",text:"Move to the table, grasp the glass, and return it to the robot's starting spot.",sigs:[
-    [{a:"MOVE",p:"dist",d:2.5},{a:"GRASP"},{a:"MOVE",p:"dist",d:2.5},{a:"RELEASE"}],
-    [{a:"ROTATE",p:"angle"},{a:"MOVE",p:"dist",d:2.5},{a:"GRASP"},{a:"ROTATE",p:"angle"},{a:"MOVE",p:"dist",d:2.5},{a:"RELEASE"}]]},
+    [{a:"MOVE",p:"dist",d:2.5,t:"NEAREST SURFACE"},{a:"GRASP",t:"THE GLASS"},{a:"MOVE",p:"dist",d:2.5},{a:"RELEASE"}],
+    [{a:"ROTATE",p:"angle"},{a:"MOVE",p:"dist",d:2.5,t:"NEAREST SURFACE"},{a:"GRASP",t:"THE GLASS"},{a:"ROTATE",p:"angle"},{a:"MOVE",p:"dist",d:2.5},{a:"RELEASE"}]]},
   {id:15,diff:"script",script:true,text:"Pick up two objects and stack them.",sigs:[
-    [{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"},{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}],
-    [{a:"GRASP"},{a:"GRASP"},{a:"RELEASE"},{a:"RELEASE"}]]},
+    [{a:"GRASP",t:"OBJECT IN FRONT"},{a:"MOVE",p:"dist"},{a:"RELEASE"},{a:"GRASP",t:"OBJECT IN FRONT"},{a:"MOVE",p:"dist"},{a:"RELEASE"}],
+    [{a:"GRASP",t:"THE BALL"},{a:"GRASP",t:"THE BOX"},{a:"RELEASE"},{a:"RELEASE"}]]},
   {id:16,diff:"script",script:true,text:"Collect one object from each human and deposit them in the box.",sigs:[
-    [{a:"GRASP"},{a:"MOVE",p:"dist",d:1.5},{a:"RELEASE"},{a:"GRASP"},{a:"MOVE",p:"dist",d:1.5},{a:"RELEASE"},{a:"GRASP"},{a:"MOVE",p:"dist",d:1.5},{a:"RELEASE"}]]},
+    [{a:"GRASP"},{a:"MOVE",p:"dist",d:1.5,t:"NEAREST HUMAN"},{a:"RELEASE",t:"THE BOX"},{a:"GRASP"},{a:"MOVE",p:"dist",d:1.5,t:"NEAREST HUMAN"},{a:"RELEASE",t:"THE BOX"},{a:"GRASP"},{a:"MOVE",p:"dist",d:1.5,t:"NEAREST HUMAN"},{a:"RELEASE",t:"THE BOX"}]]},
   {id:17,diff:"script",script:true,text:"Move, rotate, grasp, release, and beep — in exactly that order, twice.",sigs:[
     [{a:"MOVE",p:"dist"},{a:"ROTATE",p:"angle"},{a:"GRASP"},{a:"RELEASE"},{a:"BEEP"},{a:"MOVE",p:"dist"},{a:"ROTATE",p:"angle"},{a:"GRASP"},{a:"RELEASE"},{a:"BEEP"}]]}
 ];
@@ -397,12 +398,12 @@ function deckCounts(cfg){
   return counts;
 }
 
-const TARGET_WORDS = ["OBJECT IN FRONT","NEAREST SURFACE","NEAREST HUMAN","MY OTHER HAND","THE GLASS","THE BALL","THE BOX"];
+const TARGET_WORDS = ["OBJECT IN FRONT","NEAREST SURFACE","NEAREST HUMAN","MY OTHER HAND","THE GLASS","THE BALL","THE BOX","THE CUP","THE HAT"];
 const SENSOR_WORDS = ["DISTANCE < 6 INCHES","TOUCH SENSOR = PRESSED","HEAR SOUND = YES","NO OBSTACLE"];
 const PARAM_WORDS = {dist:["1 STEP","2 STEPS"], angle:["90 DEGREES","180 DEGREES"], dir:["LEFT","RIGHT","FORWARD"]};
 
 function collapseRepeats(steps){
-  const key = s => s.a + "|" + (s.p||"") + "|" + (s.d||"");
+  const key = s => s.a + "|" + (s.p||"") + "|" + (s.d||"") + "|" + (s.t||"");
   const n = steps.length;
   for (let p=1; p<=Math.floor(n/2); p++){
     if (n % p) continue;
@@ -420,32 +421,25 @@ function walkNodes(nodes, fn){
 function assembleProgram(challenge, cfg, rng, reader){
   const sig = rng.pick(challenge.sigs);
   const roots = collapseRepeats(sig);
-  walkNodes(roots, nd => {
-    if (nd.kind === "cmd" && nd.step.p) nd.paramWord = rng.pick(PARAM_WORDS[nd.step.p] || ["1 STEP"]);
-  });
   let targets = 0;
-  walkNodes(roots, nd => {
-    if (nd.kind === "cmd" && ["GRASP","RELEASE","POINT","LOOK"].includes(nd.step.a) && rng.chance(0.4)){
-      nd.target = rng.pick(TARGET_WORDS); targets++;
-    }
-  });
-  let sensors = 0;
-  if (rng.chance(0.25)){
-    const cmd = roots.find(nd => nd.kind === "cmd");
-    if (cmd){ roots[roots.indexOf(cmd)] = {kind:"if", sensor:rng.pick(SENSOR_WORDS), body:[cmd]}; sensors++; }
-  }
   const deck = deckCounts(cfg);
   const used = {};
-  walkNodes(roots, nd => { if (nd.kind === "cmd") used[nd.step.a] = (used[nd.step.a]||0)+1; });
+  walkNodes(roots, nd => {
+    if (nd.kind !== "cmd") return;
+    if (nd.step.p) nd.paramWord = rng.pick(PARAM_WORDS[nd.step.p] || ["1 STEP"]);
+    if (nd.step.t){ nd.target = nd.step.t; targets++; }
+    used[nd.step.a] = (used[nd.step.a]||0)+1;
+    if (nd.step.t) used[nd.step.t] = (used[nd.step.t]||0)+1;
+  });
   let jokers = 0, shortage = 0;
-  Object.keys(used).forEach(a => {
-    const over = used[a] - (deck[a]||0);
+  Object.keys(used).forEach(w => {
+    const over = used[w] - (deck[w]||0);
     if (over > 0){ const useJ = Math.min(over, 2 - jokers); jokers += useJ; shortage += over - useJ; }
   });
   let cards = 0, controls = 0;
   walkNodes(roots, nd => { if (nd.kind === "cmd") cards++; else controls++; });
   const assemblyTime = cards * (pickup(reader, rng) + 0.4) + controls * 1.0 + rng.range(1, 3);
-  return {sig, roots, cardCount:cards, controlCount:controls, assemblyTime, targets, sensors, jokers, shortage};
+  return {sig, roots, cardCount:cards, controlCount:controls, assemblyTime, targets, sensors:0, jokers, shortage};
 }
 
 function expandProgram(roots, rng){
@@ -454,7 +448,6 @@ function expandProgram(roots, rng){
     list.forEach(nd => {
       if (nd.kind === "cmd") out.push({a:nd.step.a, p:nd.step.p, d:nd.step.d, target:nd.target||null, paramWord:nd.paramWord||null, repeated});
       else if (nd.kind === "repeat"){ for (let i=0;i<nd.n;i++) walk(nd.body, true); }
-      else if (nd.kind === "if"){ if (rng.chance(0.7)) walk(nd.body, repeated); }
       else walk(nd.body, repeated);
     });
   })(roots, false);
@@ -623,6 +616,7 @@ function simulate(cfg){
     }
 
     let complete = !truncated;
+    let executed = 0;
     curRound = round;
     for (let i=0;i<cmds.length;i++){
       if (remaining <= 0){ break; }
@@ -646,6 +640,7 @@ function simulate(cfg){
         analytics.errors.safety++;
         push("safety", `${robotP.name}: "WILL CAUSE INJURY." Command refused under the Safety Override — free, command replaced.`, {stackIndex:i});
         wait(1.2);
+        executed++;
         continue;
       }
 
@@ -693,6 +688,7 @@ function simulate(cfg){
       }
 
       push("beep", `${robotP.name} beeps: "COMPLETE".`, {stackIndex:i, card:actionWord, posture});
+      executed++;
       const gap = TIMING.BEAT + turnGap(reader, rng);
       analytics.time.gap += gap;
       wait(gap);
@@ -707,7 +703,7 @@ function simulate(cfg){
     }
 
     let roundResult;
-    if (remaining > 0 && complete){
+    if (remaining > 0 && complete && executed === cmds.length){
       scores.team[progLabel] += 3;
       analytics.completed++;
       analytics.challenges[challenge.id].completed++;
@@ -1065,7 +1061,7 @@ function renderAnalytics(){
     </div>`;
 }
 
-const SIM_VERSION = "0.6.0";
+const SIM_VERSION = "0.6.1";
 
 function logLines(){
   return (ui.tape || []).map(ev => {
