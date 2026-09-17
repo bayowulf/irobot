@@ -8,7 +8,7 @@
 ![Play time: 30-60 min](https://img.shields.io/badge/PLAY_TIME-30--60_MIN-blue?style=for-the-badge)
 ![Ages: 9+](https://img.shields.io/badge/AGES-9%2B-orange?style=for-the-badge)
 ![Format: Print & Play](https://img.shields.io/badge/FORMAT-PRINT_%26_PLAY-brightgreen?style=for-the-badge)
-![Version: v0.2.1](https://img.shields.io/badge/VERSION-v0.2.1-informational?style=for-the-badge)
+![Version: v0.3.0](https://img.shields.io/badge/VERSION-v0.3.0-informational?style=for-the-badge)
 
 **Share link:** https://github.com/bayowulf/irobot
 
@@ -103,6 +103,31 @@ The **Robot is the odd one out** in every session, so the two teams are always a
 
 ---
 
+## 🎒 What You Need (besides the cards)
+
+Gather these before the first session. None of them are printed cards.
+
+| Item | Qty | Notes |
+| --- | --- | --- |
+| Timer (phone or stopwatch) | 1 | 90 seconds standard · 120 seconds in Eco Mode (§10). |
+| Buzzer (or a bell) | 1 | The Compiler's "COMPILER ERROR!" slam (§6). |
+| Buzz tokens (coins/chips) | 3 | The Compiler's buzzes, per round. |
+| Overrule token (a different coin) | 1 | Programmers, cancels one buzz per round. |
+| Team token markers (coins/chips) | ~20 | Team scoring; reset each session (§7). |
+| Scoresheet + pen | 1 | Session Stars, Comedy Points, Good Robot (§7–§8). |
+| Ball | 1 | Soft, easy to hold. |
+| Cup / empty glass | 1 | A plastic cup is safest. |
+| Open box | 1 | For "put it in the box" Challenges. |
+| Hat | 1 | For the Challenge in §13. |
+| Table / flat surface | 1 | The "nearest surface." |
+| Starting-spot marker | 1 | Tape or paper marking where the Robot began. |
+| Obstacle / wall | optional | Something to trigger an OutOfBounds error (§6). |
+
+> Everything else is a card: the Coding deck, the Glitch deck, the Compiler cards, and the
+> Wildcards — print those from §12.
+
+---
+
 ## 🧰 3. Setup (once per session)
 
 | Item | Setup |
@@ -122,13 +147,24 @@ The **Robot is the odd one out** in every session, so the two teams are always a
 
 1. **Draw & Draft** — the Programmers read the Challenge (silently, away from the Robot)
    and look at their hand.
-2. **Build the Stack** — lay the cards in execution order, top to bottom.
+2. **Build the Stack** — lay the cards in execution order, top to bottom. Every movement
+   Action (MOVE, ROTATE, SPIN) must be paired with a Parameter card (see The Pairing Rule).
 3. **Press RUN** — say "RUN." The timer starts.
 4. **Serial Streaming** — read one card aloud, **verbatim**, one at a time. Wait for the
    Robot to finish and beep before reading the next card.
 5. **COMPLETE** — the Robot beeps (or says "COMPLETE") after each command.
 6. **Score** — the round ends when the Challenge is done, the timer expires, or the
    Programmers call "STOP."
+
+### The Pairing Rule
+
+Every movement Action card — **MOVE**, **ROTATE**, **SPIN** — must be paired with a
+**Parameter** card. Read the Action, then its Parameter, as one command. An unpaired
+movement Action is a **Syntax Error** (§6).
+
+- Any Parameter may pair with any movement Action (`MOVE` + `90 DEGREES` is legal).
+- Parameters are **reusable**: one Parameter card may serve any number of movement Actions
+  in a round and is never consumed.
 
 ### Editing the stack
 - **Before RUN:** change anything you like.
@@ -143,6 +179,9 @@ Programmers (and the Robot) may speak **only words printed on cards**, plus thes
 
 > **RUN** · **COMPLETE** · **STOP**
 
+A paired movement command is read as **Action, then Parameter** — both must be words
+printed on their cards.
+
 Any other word out of a Programmer's mouth is a **Syntax Error**. The Compiler buzzes.
 This replaces vague rules like "no natural English" with something anyone can check.
 
@@ -153,8 +192,8 @@ This replaces vague rules like "no natural English" with something anyone can ch
 The Compiler slams the buzzer and yells **"COMPILER ERROR!"** The Robot freezes instantly.
 
 ### Valid errors (checkable, not a judgment call)
-- **Syntax Error** — a card read out of order; a missing parameter (e.g., MOVE with no
-  distance); a word that isn't printed on a card.
+- **Syntax Error** — a card read out of order; a movement Action (MOVE/ROTATE/SPIN) with
+  no paired Parameter; a word that isn't printed on a card.
 - **Runtime Error** — walking into a wall (OutOfBounds), grasping empty air (Null
   Pointer), or attempting a physical impossibility.
 - **Not an error** — the Robot being slow, clumsy-but-safe, or "looking silly." Comedy is
@@ -272,7 +311,6 @@ in the corner. Symbols are hints, not requirements.
 | 1 | BEEP | speaker | Base |
 | 1 | FREEZE | snowflake | Base |
 | 1 | SPIN | spinning arrow | Base |
-| 1 | BALANCE | scales | Base |
 | 1 | OPEN MOUTH | open mouth | Eco |
 | 1 | CLOSE EYES | closed eye | Eco |
 
@@ -287,6 +325,9 @@ in the corner. Symbols are hints, not requirements.
 | 3 | RIGHT | right arrow | Base |
 | 1 | FORWARD | up arrow | Base |
 | 1 | SPEED 50% | half gauge | Base |
+
+> **Parameters are reusable.** One Parameter card may pair with any number of movement
+> Actions in a round and is never consumed. See The Pairing Rule in §4.
 
 ### Green — Target
 | Count | Word | Icon hint | Difficulty |
@@ -414,6 +455,9 @@ new Robot. Early end only by unanimous consent.
 **Buzz rules:** Compiler gets 3 buzzes per round; Programmers get 1 Overrule token.
 Programmers may spend the Overrule to cancel one buzz (no penalty, Compiler refunded).
 Otherwise a buzz = −10 seconds and −1 team token.
+
+**Pairing:** every **MOVE**, **ROTATE**, or **SPIN** needs a paired Parameter card. Any
+Parameter works, and Parameters are reusable within a round (§4).
 
 **Default robot behaviors:** GRASP with no target = closed fist · MOVE with no distance =
 no movement (that's an error) · undefined actions revert to the most mechanical version.

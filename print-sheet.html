@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iRobot — Word / Icon Print Sheet</title>
+<style>
+  :root{
+    --cols: 5;
+    --rows: 4;
+    --cell-w: 1.7in;        /* 5 across fills 8.5in exactly            */
+    --cell-h: 2.66667in;    /* 4 down = 10.667in, leaves 1/3in at base  */
+  }
+  *{ box-sizing: border-box; }
+  html, body{ margin:0; padding:0; }
+  body{ font-family: Arial, Helvetica, "Segoe UI", sans-serif; color:#000; }
+
+  .page{
+    position:relative;
+    width:8.5in;
+    height:11in;
+    overflow:hidden;
+    background:#fff;
+    page-break-after: always;
+    break-after: page;
+  }
+  .page:last-of-type{ page-break-after: auto; break-after: auto; }
+
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(var(--cols), var(--cell-w));
+    grid-template-rows: repeat(var(--rows), var(--cell-h));
+    width:8.5in;
+  }
+  .cell{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+  }
+  .cat{
+    position:absolute;
+    top:0.035in;
+    left:0.045in;
+    font-size:5.5pt;
+    font-weight:bold;
+    letter-spacing:.3px;
+    color:#777;
+    text-transform:uppercase;
+  }
+  .unit{
+    width:100%;
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:0.07in;
+  }
+  .icon{
+    height:0.8in;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex:0 0 auto;
+  }
+  .icon svg{ width:0.8in; height:0.8in; display:block; }
+  .word{
+    width:100%;
+    margin-top:0.05in;
+    text-align:center;
+    font-weight:700;
+    line-height:1.0;
+    text-transform:uppercase;
+  }
+
+  /* shared cut lines drawn as SVG strokes so the driver can't drop them */
+  .lines{
+    position:absolute;
+    top:0;
+    left:0;
+    width:8.5in;
+    height:11in;
+  }
+
+  @media screen{
+    body{ background:#d8d8d8; padding:0.25in 0; }
+    .page{ margin:0 auto 0.25in; box-shadow:0 2px 10px rgba(0,0,0,.35); }
+  }
+  @media print{
+    @page{ size: letter; margin: 0; }
+    body{ background:#fff; padding:0; }
+    .page{ margin:0; box-shadow:none; }
+  }
+</style>
+</head>
+<body>
+<script>
+/* ---------- icon library: 100x100 viewBox, black line art ---------- */
+const ICONS = {
+  footprint: `<ellipse cx="50" cy="64" rx="15" ry="24"/><circle cx="36" cy="28" r="6" fill="#000" stroke="none"/><circle cx="49" cy="22" r="6" fill="#000" stroke="none"/><circle cx="61" cy="27" r="5" fill="#000" stroke="none"/>`,
+  curved_arrow: `<path d="M28 74 Q18 44 44 26 Q66 14 80 32"/><polyline points="66,18 82,30 70,44"/>`,
+  up_arrow: `<line x1="50" y1="82" x2="50" y2="26"/><polyline points="32,44 50,24 68,44"/>`,
+  down_arrow: `<line x1="50" y1="18" x2="50" y2="74"/><polyline points="32,56 50,76 68,56"/>`,
+  arm_up: `<line x1="24" y1="80" x2="24" y2="30"/><polyline points="12,42 24,28 36,42"/><line x1="66" y1="82" x2="66" y2="40"/><circle cx="66" cy="28" r="10"/>`,
+  arm_down: `<line x1="24" y1="20" x2="24" y2="70"/><polyline points="12,58 24,72 36,58"/><line x1="66" y1="18" x2="66" y2="60"/><circle cx="66" cy="72" r="10"/>`,
+  fist: `<rect x="28" y="34" width="46" height="44" rx="14"/><line x1="40" y1="34" x2="40" y2="54"/><line x1="52" y1="34" x2="52" y2="54"/><line x1="64" y1="36" x2="64" y2="54"/><path d="M28 52 h-6 a8 8 0 0 0 0 16 h6"/>`,
+  open_hand: `<path d="M26 56 v-16 M38 56 v-26 M50 56 v-30 M62 56 v-24 M74 56 v-14"/><path d="M26 56 h48 v10 a24 24 0 0 1 -24 24 h-4 a20 20 0 0 1 -20 -20 z"/>`,
+  point_hand: `<rect x="30" y="52" width="40" height="32" rx="12"/><rect x="44" y="18" width="13" height="42" rx="6"/><line x1="34" y1="64" x2="44" y2="64"/><line x1="34" y1="74" x2="44" y2="74"/>`,
+  eye: `<path d="M14 50 Q50 18 86 50 Q50 82 14 50 z"/><circle cx="50" cy="50" r="11" fill="#000" stroke="none"/>`,
+  eye_closed: `<path d="M18 46 Q50 68 82 46"/><path d="M30 58 l-3 10 M50 62 v10 M70 58 l3 10"/>`,
+  speaker: `<path d="M22 40 h14 l16 -14 v48 l-16 -14 h-14 z"/><path d="M64 38 q10 12 0 24"/><path d="M74 30 q16 20 0 40"/>`,
+  snowflake: `<line x1="50" y1="12" x2="50" y2="88"/><line x1="17" y1="31" x2="83" y2="69"/><line x1="83" y1="31" x2="17" y2="69"/><path d="M50 12 l-8 10 M50 12 l8 10 M50 88 l-8 -10 M50 88 l8 -10 M17 31 l12 3 M17 31 l4 12 M83 31 l-12 3 M83 31 l-4 12 M17 69 l12 -3 M17 69 l4 -12 M83 69 l-12 -3 M83 69 l-4 -12"/>`,
+  spin: `<path d="M50 20 Q78 24 80 50"/><polyline points="66,16 82,24 74,40"/><path d="M50 80 Q22 76 20 50"/><polyline points="34,84 18,76 26,60"/>`,
+  mouth_open: `<path d="M16 40 Q50 26 84 40"/><path d="M16 40 Q50 78 84 40"/>`,
+  dot_one: `<circle cx="50" cy="50" r="15" fill="#000" stroke="none"/>`,
+  dot_two: `<circle cx="34" cy="50" r="13" fill="#000" stroke="none"/><circle cx="66" cy="50" r="13" fill="#000" stroke="none"/>`,
+  right_angle: `<polyline points="26,80 26,26 80,26"/><rect x="26" y="60" width="20" height="20"/>`,
+  half_turn: `<path d="M26 60 Q50 14 74 60"/><polyline points="18,48 26,62 40,54"/><polyline points="82,48 74,62 60,54"/>`,
+  left_arrow: `<line x1="80" y1="50" x2="28" y2="50"/><polyline points="46,32 26,50 46,68"/>`,
+  right_arrow: `<line x1="20" y1="50" x2="72" y2="50"/><polyline points="54,32 74,50 54,68"/>`,
+  half_gauge: `<path d="M16 72 Q50 16 84 72"/><line x1="50" y1="72" x2="16" y2="72"/><line x1="50" y1="72" x2="50" y2="38"/><circle cx="50" cy="72" r="6" fill="#000" stroke="none"/>`,
+  cube: `<path d="M50 14 L84 34 L84 70 L50 90 L16 70 L16 34 Z"/><path d="M50 14 L50 50 M50 50 L84 34 M50 50 L16 34"/>`,
+  table: `<line x1="12" y1="38" x2="88" y2="38"/><line x1="24" y1="38" x2="24" y2="86"/><line x1="76" y1="38" x2="76" y2="86"/>`,
+  person: `<circle cx="50" cy="26" r="13"/><path d="M22 88 v-8 a28 28 0 0 1 56 0 v8"/>`,
+  two_hands: `<path d="M14 58 v-14 M24 58 v-22 M34 58 v-22 M44 58 v-14"/><path d="M14 58 h30 v6 a16 16 0 0 1 -16 16 h-2 a12 12 0 0 1 -12 -12 z"/><path d="M56 58 v-14 M66 58 v-22 M76 58 v-22 M86 58 v-14"/><path d="M56 58 h30 v6 a16 16 0 0 1 -16 16 h-2 a12 12 0 0 1 -12 -12 z"/>`,
+  cup: `<path d="M30 22 h40 l-6 60 h-28 z"/><line x1="34" y1="40" x2="66" y2="40"/>`,
+  ball: `<circle cx="50" cy="50" r="32"/><path d="M22 66 a34 34 0 0 1 0 -32"/>`,
+  box: `<path d="M22 38 L50 24 L78 38 L50 52 Z"/><path d="M22 38 V66 L50 80 V52"/><path d="M78 38 V66 L50 80"/>`,
+  ruler: `<rect x="12" y="36" width="76" height="28" rx="3"/><line x1="24" y1="36" x2="24" y2="50"/><line x1="36" y1="36" x2="36" y2="56"/><line x1="48" y1="36" x2="48" y2="50"/><line x1="60" y1="36" x2="60" y2="56"/><line x1="72" y1="36" x2="72" y2="50"/>`,
+  tap: `<rect x="43" y="14" width="15" height="42" rx="7"/><path d="M28 64 Q50 80 72 64"/><circle cx="50" cy="78" r="9"/>`,
+  ear: `<path d="M60 22 a24 24 0 1 0 -30 34 c4 6 4 10 4 16 a9 9 0 0 0 14 6"/><path d="M44 40 a11 11 0 1 1 15 11 c-4 2 -6 5 -6 9"/>`,
+  clear_path: `<line x1="16" y1="50" x2="66" y2="50" stroke-dasharray="10 8"/><polyline points="58,32 78,50 58,68"/>`,
+  battery: `<rect x="14" y="38" width="64" height="28" rx="4"/><rect x="78" y="45" width="8" height="14" fill="#000" stroke="none"/><rect x="20" y="44" width="10" height="16" fill="#000" stroke="none"/>`,
+  sensor_x: `<circle cx="40" cy="54" r="8" fill="#000" stroke="none"/><path d="M58 38 a22 22 0 0 1 0 32"/><path d="M70 30 a34 34 0 0 1 0 48"/><line x1="58" y1="16" x2="90" y2="84"/><line x1="90" y1="16" x2="58" y2="84"/>`,
+  wheel: `<circle cx="50" cy="60" r="24"/><circle cx="50" cy="60" r="9"/><path d="M18 22 h20 M30 12 h24"/>`,
+  speech_bubble: `<path d="M18 20 h64 v42 h-30 l-18 16 v-16 h-16 z"/><polyline points="54,28 42,48 56,48 44,68"/>`,
+  chip: `<rect x="28" y="28" width="44" height="44" rx="4"/><rect x="42" y="42" width="16" height="16"/><path d="M40 28 v-10 M52 28 v-10 M64 28 v-10 M40 72 v10 M52 72 v10 M64 72 v10 M28 40 h-10 M28 52 h-10 M28 64 h-10 M72 40 h10 M72 52 h10 M72 64 h10"/>`,
+  rewind: `<path d="M74 66 Q74 34 46 30 Q28 28 22 42"/><polyline points="14,30 22,44 36,40"/>`,
+  flame: `<path d="M50 14 c8 16 24 22 24 40 a24 24 0 0 1 -48 0 c0 -12 8 -18 12 -28 c3 8 5 9 9 13 c-2 -8 -2 -15 3 -25 z"/>`,
+  gear: `<circle cx="50" cy="50" r="15"/><path d="M50 16 v10 M50 74 v10 M16 50 h10 M74 50 h10 M26 26 l7 7 M67 67 l7 7 M74 26 l-7 7 M33 67 l-7 7"/>`,
+  loop: `<path d="M20 72 h12 Q32 40 52 28 Q70 18 80 36"/><polyline points="66,22 82,34 72,50"/>`,
+  diamond: `<path d="M50 14 L86 50 L50 86 L14 50 Z"/>`,
+  branch: `<line x1="28" y1="16" x2="28" y2="84"/><line x1="28" y1="38" x2="72" y2="38"/><polyline points="60,28 74,38 60,48"/><line x1="28" y1="64" x2="72" y2="64"/><polyline points="60,54 74,64 60,74"/>`,
+  bell: `<path d="M24 64 a26 26 0 0 1 52 0 z"/><line x1="50" y1="30" x2="50" y2="38"/><circle cx="50" cy="24" r="5"/><path d="M40 72 a10 10 0 0 0 20 0"/>`,
+  bug: `<ellipse cx="50" cy="58" rx="18" ry="22"/><circle cx="50" cy="28" r="10"/><path d="M32 50 h-14 M68 50 h14 M32 62 h-14 M68 62 h14 M34 74 l-12 10 M66 74 l12 10"/><line x1="42" y1="19" x2="33" y2="8"/><line x1="58" y1="19" x2="67" y2="8"/>`,
+  bandage: `<rect x="10" y="38" width="80" height="24" rx="12" transform="rotate(-22 50 50)"/><circle cx="46" cy="50" r="3" fill="#000" stroke="none"/><circle cx="54" cy="47" r="3" fill="#000" stroke="none"/><circle cx="40" cy="54" r="3" fill="#000" stroke="none"/><circle cx="60" cy="43" r="3" fill="#000" stroke="none"/>`,
+  undo: `<path d="M74 44 Q74 74 46 70 Q28 68 22 54"/><polyline points="14,66 22,52 36,58"/>`,
+  blank: `<rect x="20" y="20" width="60" height="60" rx="6" stroke-dasharray="10 8"/><path d="M42 40 a9 9 0 1 1 11 9 c-3 2 -4 4 -4 7"/><circle cx="49" cy="66" r="3.5" fill="#000" stroke="none"/>`
+};
+
+/* ---------- card data: counts straight from README section 12 ---------- */
+const CAT_LABEL = {
+  blue:     'BLUE',
+  orange:   'ORANGE',
+  green:    'GREEN',
+  yellow:   'YELLOW',
+  red:      'RED',
+  purple:   'PURPLE',
+  compiler: 'COMPILER',
+  wildcard: 'WILDCARD'
+};
+
+const CARDS = [
+  /* Blue — Action */
+  {cat:'blue', word:'MOVE',        icon:'footprint',   count:4},
+  {cat:'blue', word:'ROTATE',      icon:'curved_arrow',count:3},
+  {cat:'blue', word:'RAISE ARM',   icon:'arm_up',      count:2},
+  {cat:'blue', word:'LOWER ARM',   icon:'arm_down',    count:2},
+  {cat:'blue', word:'GRASP',       icon:'fist',        count:3},
+  {cat:'blue', word:'RELEASE',     icon:'open_hand',   count:2},
+  {cat:'blue', word:'POINT',       icon:'point_hand',  count:1},
+  {cat:'blue', word:'LOOK',        icon:'eye',         count:1},
+  {cat:'blue', word:'BEEP',        icon:'speaker',     count:1},
+  {cat:'blue', word:'FREEZE',      icon:'snowflake',   count:1},
+  {cat:'blue', word:'SPIN',        icon:'spin',        count:1},
+  {cat:'blue', word:'OPEN MOUTH',  icon:'mouth_open',  count:1},
+  {cat:'blue', word:'CLOSE EYES',  icon:'eye_closed',  count:1},
+  /* Orange — Parameter */
+  {cat:'orange', word:'1 STEP',       icon:'dot_one',     count:3},
+  {cat:'orange', word:'2 STEPS',      icon:'dot_two',     count:2},
+  {cat:'orange', word:'90 DEGREES',   icon:'right_angle', count:2},
+  {cat:'orange', word:'180 DEGREES',  icon:'half_turn',   count:1},
+  {cat:'orange', word:'LEFT',         icon:'left_arrow',  count:3},
+  {cat:'orange', word:'RIGHT',        icon:'right_arrow', count:3},
+  {cat:'orange', word:'FORWARD',      icon:'up_arrow',    count:1},
+  {cat:'orange', word:'SPEED 50%',    icon:'half_gauge',  count:1},
+  /* Green — Target */
+  {cat:'green', word:'OBJECT IN FRONT',  icon:'cube',      count:2},
+  {cat:'green', word:'NEAREST SURFACE',  icon:'table',     count:2},
+  {cat:'green', word:'NEAREST HUMAN',    icon:'person',    count:2},
+  {cat:'green', word:'MY OTHER HAND',    icon:'two_hands', count:1},
+  {cat:'green', word:'THE GLASS',        icon:'cup',       count:1},
+  {cat:'green', word:'THE BALL',         icon:'ball',      count:1},
+  {cat:'green', word:'THE BOX',          icon:'box',       count:1},
+  /* Yellow — Sensor */
+  {cat:'yellow', word:'DISTANCE < 6 INCHES',   icon:'ruler',      count:1},
+  {cat:'yellow', word:'TOUCH SENSOR = PRESSED',icon:'tap',        count:1},
+  {cat:'yellow', word:'HEAR SOUND = YES',      icon:'ear',        count:1},
+  {cat:'yellow', word:'NO OBSTACLE',           icon:'clear_path', count:1},
+  /* Red — Glitch */
+  {cat:'red', word:'LOW BATTERY',        icon:'battery',      count:1},
+  {cat:'red', word:'SENSOR MALFUNCTION', icon:'sensor_x',     count:1},
+  {cat:'red', word:'WHEELS SLIP',        icon:'wheel',        count:1},
+  {cat:'red', word:'LANGUAGE CORRUPTED', icon:'speech_bubble',count:1},
+  {cat:'red', word:'FIRMWARE UPDATE',    icon:'chip',         count:1},
+  {cat:'red', word:'DEJA VU',            icon:'rewind',       count:1},
+  {cat:'red', word:'OVERHEAT',           icon:'flame',        count:1},
+  {cat:'red', word:'SOFTWARE UPDATE',    icon:'gear',         count:1},
+  /* Purple — Advanced */
+  {cat:'purple', word:'REPEAT 3 TIMES', icon:'loop',    count:2},
+  {cat:'purple', word:'REPEAT 2 TIMES', icon:'loop',    count:1},
+  {cat:'purple', word:'WHILE [CONDITION]', icon:'diamond', count:1},
+  {cat:'purple', word:'IF / THEN',      icon:'branch',  count:1},
+  {cat:'purple', word:'ELSE',           icon:'branch',  count:1},
+  /* Compiler */
+  {cat:'compiler', word:'BUZZER',        icon:'bell',    count:1},
+  {cat:'compiler', word:'BUG INJECTION', icon:'bug',     count:2},
+  {cat:'compiler', word:'PATCH',         icon:'bandage', count:1},
+  {cat:'compiler', word:'ROLLBACK',      icon:'undo',    count:1},
+  /* Wildcard */
+  {cat:'wildcard', word:'BLANK', icon:'blank', count:2}
+];
+
+/* ---------- layout: 5 x 4 = 20 packed pieces per sheet ---------- */
+const COLS = 5, ROWS = 4;
+const SHEETS = Math.ceil(
+  CARDS.reduce(function(n, c){ return n + c.count; }, 0) / (COLS * ROWS)
+);
+const CELL_W = 8.5 / COLS;      /* 1.7in    */
+const CELL_H = 2.66667;         /* 4 rows = 10.667in, 0.333in spare at the base */
+const CUT_W = 0.018;            /* SVG stroke width in inches (~1.3pt) */
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+/* size each word to the real font metrics so nothing spills out of its cell */
+const measureCanvas = document.createElement('canvas');
+const measureCtx = measureCanvas.getContext('2d');
+const FONT_STACK = 'Arial, Helvetica, "Segoe UI", sans-serif';
+
+function textWidth(txt, sizePx){
+  measureCtx.font = '700 ' + sizePx + 'px ' + FONT_STACK;
+  return measureCtx.measureText(txt).width;
+}
+
+const PAD     = 0.07;                                   /* unit padding, in */
+const ICON_H  = 0.8;                                    /* icon height, in  */
+const AVAIL_W = (CELL_W - 2 * PAD) * 96;                /* px               */
+const AVAIL_H = (CELL_H - 2 * PAD - ICON_H - 0.05) * 96;
+const MAX_PX  = 34 * 96 / 72;                           /* 34pt cap         */
+
+function lineCount(word, sizePx){
+  const tokens = word.split(/\s+/).filter(Boolean);
+  const space = textWidth(' ', sizePx);
+  let lines = 1, cur = 0;
+  for (let i = 0; i < tokens.length; i++){
+    const w = textWidth(tokens[i], sizePx);
+    if (cur === 0) cur = w;
+    else if (cur + space + w <= AVAIL_W) cur += space + w;
+    else { lines++; cur = w; }
+  }
+  return lines;
+}
+
+function fitWordSize(word){
+  const tokens = word.split(/\s+/).filter(Boolean);
+  let maxTok = 0;
+  for (let i = 0; i < tokens.length; i++) maxTok = Math.max(maxTok, textWidth(tokens[i], 100));
+  let px = Math.min(MAX_PX, 100 * AVAIL_W / maxTok);
+  for (let i = 0; i < 60 && px > 12; i++){
+    if (lineCount(word, px) * px * 1.02 <= AVAIL_H) break;
+    px *= 0.94;
+  }
+  return Math.max(9, px * 72 / 96);   /* px -> pt */
+}
+
+function svg(name, attrs){
+  const n = document.createElementNS(SVG_NS, name);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  return n;
+}
+
+function iconSvg(name){
+  const s = svg('svg', { viewBox:'0 0 100 100', fill:'none', stroke:'#000',
+    'stroke-width':7, 'stroke-linecap':'round', 'stroke-linejoin':'round' });
+  s.innerHTML = ICONS[name] || '';
+  return s;
+}
+
+function make(tag, cls){
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  return n;
+}
+
+/* expand counts into individual pieces, in README order */
+const pieces = [];
+CARDS.forEach(function(c){
+  for (let i = 0; i < c.count; i++){
+    pieces.push({ cat:c.cat, word:c.word, icon:c.icon });
+  }
+});
+
+function addCutLines(page){
+  const s = svg('svg', { viewBox:'0 0 8.5 11', class:'lines' });
+  for (let c = 1; c < COLS; c++){
+    const x = c * CELL_W;
+    s.appendChild(svg('line', { x1:x, y1:0, x2:x, y2:CELL_H * ROWS,
+      stroke:'#000', 'stroke-width':CUT_W }));
+  }
+  for (let r = 1; r <= ROWS; r++){
+    const y = r * CELL_H;
+    s.appendChild(svg('line', { x1:0, y1:y, x2:8.5, y2:y,
+      stroke:'#000', 'stroke-width':CUT_W }));
+  }
+  page.appendChild(s);
+}
+
+for (let p = 0; p < SHEETS; p++){
+  const page = make('div', 'page');
+
+  const grid = make('div', 'grid');
+  for (let i = 0; i < COLS * ROWS; i++){
+    const cell = make('div', 'cell');
+    const item = pieces[p * COLS * ROWS + i];
+    if (item){
+      const label = make('div', 'cat');
+      label.textContent = CAT_LABEL[item.cat];
+      cell.appendChild(label);
+
+      const unit = make('div', 'unit');
+
+      const icon = make('div', 'icon');
+      icon.appendChild(iconSvg(item.icon));
+      unit.appendChild(icon);
+
+      const word = make('div', 'word');
+      word.textContent = item.word;
+      word.style.fontSize = fitWordSize(item.word).toFixed(1) + 'pt';
+      unit.appendChild(word);
+
+      cell.appendChild(unit);
+    }
+    grid.appendChild(cell);
+  }
+  page.appendChild(grid);
+
+  addCutLines(page);
+  document.body.appendChild(page);
+}
+</script>
+</body>
+</html>

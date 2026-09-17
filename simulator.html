@@ -183,6 +183,7 @@
       <h3>Balance Report</h3>
       <div class="muted" id="analyticsbody">Run a session to generate balance diagnostics.</div>
       <div class="flexbtns" id="exportbtns" style="display:none">
+        <button id="explog">Export Log</button>
         <button id="expjson">Export JSON</button>
         <button id="expcsv">Export CSV</button>
       </div>
@@ -201,7 +202,7 @@ const CAT = {
 const DECK_SPEC = [
   ["action","MOVE",4],["action","ROTATE",3],["action","RAISE ARM",2],["action","LOWER ARM",2],
   ["action","GRASP",3],["action","RELEASE",2],["action","POINT",1],["action","LOOK",1],
-  ["action","BEEP",1],["action","FREEZE",1],["action","SPIN",1],["action","BALANCE",1],
+  ["action","BEEP",1],["action","FREEZE",1],["action","SPIN",1],
   ["action","OPEN MOUTH",1],["action","CLOSE EYES",1],
   ["param","1 STEP",3],["param","2 STEPS",2],["param","90 DEGREES",2],["param","180 DEGREES",1],
   ["param","LEFT",3],["param","RIGHT",3],["param","FORWARD",1],["param","SPEED 50%",1],
@@ -247,7 +248,7 @@ const TEAM_B = ["verity","julius"];
 
 const ACTION_TIME = {
   "MOVE":2.2,"ROTATE":1.6,"RAISE ARM":1.4,"LOWER ARM":1.4,"GRASP":1.6,"RELEASE":1.2,
-  "POINT":1.0,"LOOK":1.0,"BEEP":0.6,"FREEZE":1.0,"SPIN":2.2,"BALANCE":1.8,
+  "POINT":1.0,"LOOK":1.0,"BEEP":0.6,"FREEZE":1.0,"SPIN":2.2,
   "OPEN MOUTH":0.8,"CLOSE EYES":0.8
 };
 
@@ -261,7 +262,7 @@ const CHALLENGES = [
   {id:7,diff:"medium",text:"Grasp the object in front, rotate 90 degrees, and release it into the box.",sig:[{a:"GRASP"},{a:"ROTATE",p:"angle"},{a:"RELEASE"}]},
   {id:8,diff:"medium",text:"Touch the nearest human, then point at the nearest surface.",sig:[{a:"GRASP"},{a:"POINT"}]},
   {id:9,diff:"hard",text:"Get the hat onto someone's head without touching them.",sig:[{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}]},
-  {id:10,diff:"hard",text:"Pick up the ball, spin 180 degrees, and place it on the nearest surface.",sig:[{a:"GRASP"},{a:"SPIN"},{a:"RELEASE"}]},
+  {id:10,diff:"hard",text:"Pick up the ball, spin 180 degrees, and place it on the nearest surface.",sig:[{a:"GRASP"},{a:"SPIN",p:"angle"},{a:"RELEASE"}]},
   {id:11,diff:"hard",text:"Hand the cup to every human in the room, one at a time.",sig:[{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"},{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}]},
   {id:12,diff:"hard",text:"Move to the table, grasp the glass, and return it to the robot's starting spot.",sig:[{a:"MOVE",p:"dist"},{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}]},
   {id:13,diff:"script",script:true,text:"Pick up two objects and stack them.",sig:[{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"},{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}]},
@@ -322,6 +323,7 @@ function analyzeHand(hand, sig, rng){
   const used = new Set();
   const stack = [];
   const missing = [];
+  const paramsUsed = new Set();
   let wilds = 0;
   const find = (pred) => { for (const c of hand){ if (!used.has(c.uid) && pred(c)) return c; } return null; };
   const takeWild = () => { const w = find(c => c.cat==="wild"); if (w){ used.add(w.uid); wilds++; } return w; };
@@ -334,16 +336,16 @@ function analyzeHand(hand, sig, rng){
     entry.actionCard = ac;
     if (!ac){ entry.missingAction = step.a; missing.push({word:step.a, type:"action"}); }
     if (step.p){
-      let pc = find(c => c.cat==="param" && paramType(c.word)===step.p);
-      if (pc) used.add(pc.uid);
-      else { pc = takeWild(); if (pc) entry.paramWild = true; }
+      let pc = find(c => c.cat==="param");
+      if (pc) paramsUsed.add(pc.uid);
+      else { pc = takeWild(); if (pc){ entry.paramWild = true; paramsUsed.add(pc.uid); } }
       entry.paramCard = pc;
       if (!pc){ entry.missingParam = step.p; missing.push({word:"param:"+step.p, type:"param"}); }
     }
     stack.push(entry);
   }
   const leftovers = hand.filter(c => !used.has(c.uid));
-  return {stack, missing, wilds, leftovers};
+  return {stack, missing, wilds, leftovers, paramsUsed: paramsUsed.size};
 }
 
 function simulate(cfg){
@@ -370,7 +372,8 @@ function simulate(cfg){
   const analytics = {
     deck: deckCounts(cfg), draws:{}, plays:{}, wildcardUses:0, hands:0, unsolvable:0,
     missingByWord:{}, rounds:[], errors:{syntax:0,runtime:0,missed:0,safety:0},
-    buzz:{used:0,refunded:0,missed:0}, overrule:0, glitch:0, compilerCards:0, completed:0, timeout:0
+    buzz:{used:0,refunded:0,missed:0}, overrule:0, glitch:0, compilerCards:0, completed:0, timeout:0,
+    paramSteps:0, paramDistinct:0, paramReuse:0, paramPoolHands:0, paramStarvedHands:0
   };
 
   const codingDeck = [];
@@ -433,6 +436,13 @@ function simulate(cfg){
     analytics.wildcardUses += plan.wilds;
     plan.missing.forEach(m => { analytics.missingByWord[m.word] = (analytics.missingByWord[m.word]||0)+1; });
     if (plan.missing.length > 0) analytics.unsolvable++;
+    const movementSteps = challenge.sig.filter(s => s.p).length;
+    const poolInHand = hand.filter(c => c.cat==="param").length;
+    analytics.paramSteps += movementSteps;
+    analytics.paramDistinct += plan.paramsUsed;
+    analytics.paramReuse += Math.max(0, movementSteps - plan.paramsUsed);
+    if (poolInHand > 0) analytics.paramPoolHands++;
+    if (poolInHand === 0 && movementSteps > 0) analytics.paramStarvedHands++;
     plan.stack.forEach(e => {
       if (e.actionCard && !e.actionWild) analytics.plays[e.actionCard.word] = (analytics.plays[e.actionCard.word]||0)+1;
       if (e.actionWild) analytics.plays["BLANK"] = (analytics.plays["BLANK"]||0)+1;
@@ -524,7 +534,7 @@ function simulate(cfg){
         continue;
       }
 
-      const risky = entry.step.a==="BALANCE" || (entry.step.a==="MOVE" && entry.step.p==="dist");
+      const risky = ["MOVE","ROTATE","SPIN"].includes(entry.step.a);
       if (risky && rng.chance(0.04)){
         analytics.errors.safety++;
         push("safety", `${robotP.name}: "WILL CAUSE INJURY." Command refused under the Safety Override — free, command replaced.`, {stackIndex:i});
@@ -641,6 +651,10 @@ function buildDiagnostics(A){
   }
   if (A.wildcardUses > 0){
     out.push(`<b>Wildcards:</b> used ${A.wildcardUses} time(s). High reliance signals the base deck cannot cover Challenge requirements alone.`);
+  }
+  if (A.paramSteps > 0){
+    const coverage = A.hands ? Math.round(100*A.paramPoolHands/A.hands) : 0;
+    out.push(`<b>Pairing:</b> ${A.paramSteps} movement step(s) demanded a Parameter; hands held one ${coverage}% of the time. Reuse covered ${A.paramReuse} step(s) beyond the first distinct Parameter. ${A.paramStarvedHands>0 ? `${A.paramStarvedHands} hand(s) had no Parameter at all — now a Syntax Error.` : `No hand was ever Parameter-starved.`}`);
   }
   if (avgUsed > 75) out.push(`<b>Time pressure:</b> rounds consume ~${avgUsed.toFixed(0)}s of the 90s budget on average. Consider +15–30s or easier Challenges.`);
   else if (avgUsed > 0 && avgUsed < 35) out.push(`<b>Under-tension:</b> rounds finish in ~${avgUsed.toFixed(0)}s — the timer rarely bites. Consider harder Challenges or a shorter clock.`);
@@ -930,9 +944,35 @@ function renderAnalytics(){
     </div>`;
 }
 
+const SIM_VERSION = "0.3.0";
+
+function logLines(){
+  return (ui.tape || []).map(ev => {
+    const timer = (ev.remaining===null || ev.remaining===undefined) ? "timer=--" : "timer=" + fmt(Math.max(0, ev.remaining)) + "s";
+    return `[R${ev.round||0} t=${fmt(ev.t)}s ${timer}] ${ev.kind.toUpperCase()} — ${ev.text}`;
+  });
+}
+
 function exportJSON(){
   const A = ui.analytics; if (!A) return;
-  download(`irobot-sim-${$("#seed").value}.json`, JSON.stringify(A, null, 2));
+  const payload = {
+    meta: {tool:"iRobot Session Simulator", version:SIM_VERSION, seed:$("#seed").value, eco:$("#eco").checked, adv:$("#adv").checked, robot:"quentin", generated:new Date().toISOString()},
+    analytics: A,
+    events: ui.tape || []
+  };
+  download(`irobot-sim-${$("#seed").value}.json`, JSON.stringify(payload, null, 2));
+}
+
+function exportLog(){
+  if (!ui.tape) return;
+  const A = ui.analytics;
+  const header = [
+    `iRobot Session Simulator v${SIM_VERSION}`,
+    `seed=${$("#seed").value}  eco=${$("#eco").checked}  adv=${$("#adv").checked}  robot=quentin`,
+    `events=${ui.tape.length}  hands=${A?A.hands:""}  completed=${A?A.completed:""}  winner=${A?A.winner:""}`,
+    "----------------------------------------------------------------"
+  ].join("\n");
+  download(`irobot-log-${$("#seed").value}.txt`, header + "\n" + logLines().join("\n") + "\n");
 }
 function exportCSV(){
   const A = ui.analytics; if (!A) return;
@@ -967,6 +1007,7 @@ $("#rand").addEventListener("click", () => { $("#seed").value = "irobot-" + Math
 $("#seed").addEventListener("change", startSim);
 $("#eco").addEventListener("change", startSim);
 $("#adv").addEventListener("change", startSim);
+$("#explog").addEventListener("click", exportLog);
 $("#expjson").addEventListener("click", exportJSON);
 $("#expcsv").addEventListener("click", exportCSV);
 

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iRobot — Construction Paper Card Cut Guide (3 x 3)</title>
+<style>
+  html, body{ margin:0; padding:0; background:#fff; }
+
+  .page{
+    width:8.5in;
+    height:11in;
+    overflow:hidden;
+    background:#fff;
+    page-break-after: always;
+    break-after: page;
+  }
+  .page:last-child{ page-break-after: auto; break-after: auto; }
+
+  .page svg{
+    display:block;
+    width:8.5in;
+    height:11in;
+  }
+
+  @media screen{
+    body{ background:#d8d8d8; padding:0.25in 0; }
+    .page{ margin:0 auto 0.25in; box-shadow:0 2px 10px rgba(0,0,0,.35); }
+  }
+  @media print{
+    @page{ size: letter; margin: 0; }
+    body{ background:#fff; padding:0; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .page{ margin:0; box-shadow:none; }
+  }
+</style>
+</head>
+<body>
+<script>
+/* 74 cut-out icons need 74 card backs. 9 cards / sheet -> 9 sheets = 81 cards.
+   Lines are drawn as SVG strokes (vector graphics), which physical printer
+   drivers rasterize reliably, unlike very thin CSS box borders. */
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const SHEETS = 9;
+
+/* page geometry in inches (SVG user units = 1in because of the viewBox) */
+const PAGE_W = 8.5, PAGE_H = 11;
+const LINE_W = 0.02;                 /* ~1.44pt: thick enough that no driver drops it */
+const V = [ PAGE_W / 3, 2 * PAGE_W / 3 ];
+const H = [ PAGE_H / 3, 2 * PAGE_H / 3 ];
+
+function svgEl(name, attrs){
+  const n = document.createElementNS(SVG_NS, name);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  return n;
+}
+
+/* 1-inch calibration gauge (first sheet only). If this measures 1.000in on the
+   printout, your driver is printing at true size; if not, it is scaling the page
+   (wrong paper size, or "Fit to page" instead of "Actual size"). */
+function addCalibration(svg){
+  const y = 1.83, x1 = 0.90, x2 = 1.90;
+  svg.appendChild(svgEl('line', {
+    x1:x1, y1:y, x2:x2, y2:y, stroke:'#777', 'stroke-width':0.012
+  }));
+  [x1, x2].forEach(function(x){
+    svg.appendChild(svgEl('line', {
+      x1:x, y1:y - 0.07, x2:x, y2:y + 0.07, stroke:'#777', 'stroke-width':0.012
+    }));
+  });
+  const t = svgEl('text', {
+    x:(x1 + x2) / 2, y:y + 0.26, fill:'#777',
+    'font-family':'Arial, Helvetica, sans-serif',
+    'font-size':0.095, 'text-anchor':'middle'
+  });
+  t.textContent = 'CALIBRATE = 1 INCH';
+  svg.appendChild(t);
+}
+
+for (let p = 0; p < SHEETS; p++){
+  const page = document.createElement('div');
+  page.className = 'page';
+
+  const svg = svgEl('svg', {
+    viewBox: '0 0 ' + PAGE_W + ' ' + PAGE_H,
+    xmlns: SVG_NS
+  });
+
+  V.forEach(function(x){
+    svg.appendChild(svgEl('line', {
+      x1:x, y1:0, x2:x, y2:PAGE_H,
+      stroke:'#000', 'stroke-width':LINE_W
+    }));
+  });
+  H.forEach(function(y){
+    svg.appendChild(svgEl('line', {
+      x1:0, y1:y, x2:PAGE_W, y2:y,
+      stroke:'#000', 'stroke-width':LINE_W
+    }));
+  });
+
+  if (p === 0) addCalibration(svg);
+
+  page.appendChild(svg);
+  document.body.appendChild(page);
+}
+</script>
+</body>
+</html>
