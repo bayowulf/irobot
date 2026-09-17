@@ -89,6 +89,7 @@
   .log .k-safety{border-color:#e6b800;color:#ffe08a}
   .log .k-posture{border-color:#33456b;color:#bcd6ff}
   .log .k-control{border-color:var(--advanced);color:#d9c9ff}
+  .log .k-rollback{border-color:var(--compiler);color:#ced4da;font-weight:700}
   .log .k-freeze{border-color:#e03131;color:#ffb3b3;font-weight:700}
   .log .k-round-end,.log .k-session-end{border-color:#7048e8;color:#d9c9ff;font-weight:700}
   .log .k-roles,.log .k-draw,.log .k-plan,.log .k-run{border-color:#33456b}
@@ -230,6 +231,18 @@ const GLITCH_DECK = [
 ];
 
 const COMPILER_CARDS = ["BUZZER","BUG INJECTION","BUG INJECTION","PATCH","ROLLBACK"];
+
+const PATCH_POOL = [
+  {a:"BEEP"},
+  {a:"LOOK", t:"NEAREST SURFACE"},
+  {a:"RAISE ARM"},
+  {a:"LOWER ARM"},
+  {a:"FREEZE"},
+  {a:"MOVE", p:"dist", pw:"1 STEP"},
+  {a:"ROTATE", p:"angle", pw:"90 DEGREES"},
+  {a:"GRASP", t:"OBJECT IN FRONT"},
+  {a:"RELEASE"}
+];
 
 const GLITCH_EFFECT = {
   "LOW BATTERY":{cmds:3,mult:1.8,txt:"speaks in slow motion"},
@@ -516,6 +529,7 @@ function simulate(cfg){
     deck: deckCounts(cfg), plays:{}, jokersUsed:0, targetsUsed:0, sensorsUsed:0, repeatBlocks:0, cardShortages:0, buildTimeouts:0,
     rounds:[], errors:{syntax:0,runtime:0,missed:0,safety:0},
     buzz:{used:0,refunded:0,missed:0}, overrule:0, glitch:0, compilerCards:0, completed:0, timeout:0, bonus:0,
+    rollbacks:0, patches:0, buzzCards:0,
     challenges:{}, openings:{},
     time:{draft:0, read:0, execute:0, move:0, arm:0, stand:0, gap:0, buzz:0, freeze:0}
   };
@@ -597,6 +611,7 @@ function simulate(cfg){
       if (keep < cmds.length) truncated = true;
       cmds = cmds.slice(0, keep);
     }
+    cmds.forEach(c => { if (c.a) c.required = true; });
 
     let status = {glitch:null, cmdsLeft:0};
     function injectBug(tag){
@@ -609,23 +624,25 @@ function simulate(cfg){
     }
     injectBug("Compiler injects a Bug every round —");
     analytics.compilerCards++;
+
+    let scheduled = null;
     if (rng.chance(0.5)){
       const cc = rng.pick(COMPILER_CARDS);
       analytics.compilerCards++;
-      if (cc==="BUZZER"){
-        push("glitch", `Compiler card: BUZZER — pre-run warning; no token spent.`);
-      } else if (cc==="BUG INJECTION"){
+      if (cc==="BUG INJECTION"){
         injectBug("Compiler card: BUG INJECTION (extra) —");
-      } else if (cc==="PATCH"){
-        push("glitch", `Compiler card: PATCH — Programmers must add one legal command of the Compiler's choice.`);
-      } else if (cc==="ROLLBACK"){
-        push("glitch", `Compiler card: ROLLBACK — Robot's last completed action will be undone once.`);
+      } else {
+        const reqNow = cmds.filter(c => c.required).length;
+        const at = reqNow <= 1 ? 1 : 1 + rng.int(reqNow - 1);
+        scheduled = {card:cc, at};
+        push("glitch", `Compiler card: ${cc} — held for mid-run; it will fire after command ${at}.`);
       }
     }
 
     const repeatCount = plan.roots.filter(n => n.kind === "repeat").length;
-    const requiredCount = cmds.filter(c => c.a).length;
-    push("plan", `Program assembled: ${requiredCount} command(s)${cmds.length>requiredCount?` + ${cmds.length-requiredCount} injected card(s)`:""} in ${assemblyTime.toFixed(0)}s of ${buildCap}s${repeatCount?` · ${repeatCount} REPEAT block(s)`:""}${plan.jokers?` · ${plan.jokers} Joker(s)`:""}${plan.targets?` · ${plan.targets} Target(s)`:""}.${truncated?" Build timer expired — forced RUN with an incomplete program.":""}`, {challenge, stack:cmds, sig, buildCap, buildLeft, truncated});
+    const requiredCount = cmds.filter(c => c.required).length;
+    const injectedCount = cmds.filter(c => c.glitch).length;
+    push("plan", `Program assembled: ${requiredCount} command(s)${injectedCount?` + ${injectedCount} injected card(s)`:""} in ${assemblyTime.toFixed(0)}s of ${buildCap}s${repeatCount?` · ${repeatCount} REPEAT block(s)`:""}${plan.jokers?` · ${plan.jokers} Joker(s)`:""}${plan.targets?` · ${plan.targets} Target(s)`:""}.${truncated?" Build timer expired — forced RUN with an incomplete program.":""}`, {challenge, stack:cmds, sig, buildCap, buildLeft, truncated});
 
     props.timerRunning = true;
     timerCap = cfg.eco ? 90 : 60;
@@ -719,7 +736,7 @@ function simulate(cfg){
         analytics.errors.safety++;
         push("safety", `${robotP.name}: "WILL CAUSE INJURY." Command refused under the Safety Override — free, command replaced.`, {stackIndex:i});
         wait(1.2);
-        executed++;
+        if (item.required !== false) executed++;
         continue;
       }
 
@@ -759,11 +776,43 @@ function simulate(cfg){
       wait(exec);
 
       push("beep", `${robotP.name} beeps: "COMPLETE".`, {stackIndex:i, card:actionWord, posture});
-      executed++;
-      lastCmd = {a:actionWord, p:item.p, d:item.d, paramWord, target:targetWord};
+      if (item.required !== false) executed++;
+      lastCmd = {a:actionWord, p:item.p, d:item.d, paramWord, target:targetWord, required:item.required !== false};
       const gap = TIMING.BEAT + turnGap(reader, rng);
       analytics.time.gap += gap;
       wait(gap);
+
+      if (scheduled && executed >= scheduled.at){
+        const card = scheduled.card; scheduled = null;
+        if (card === "BUZZER"){
+          if (props.buzzTokens > 0){
+            props.buzzTokens--; props.buzzer = true; analytics.buzz.used++; analytics.buzzCards++;
+            push("buzz", `Compiler card: BUZZER — ${compBest.name} buzzes the Robot; 10s freeze (1 buzz token).`, {stackIndex:i, posture});
+            analytics.time.freeze += 10; wait(10);
+          } else {
+            push("glitch", `Compiler card: BUZZER — no buzz tokens left; nothing happens.`, {stackIndex:i});
+          }
+        } else if (card === "PATCH"){
+          const patch = rng.pick(PATCH_POOL);
+          const item2 = {a:patch.a, paramWord:patch.pw||null, target:patch.t||null, required:false, patch:true};
+          const pos = Math.min(i+1, cmds.length);
+          cmds.splice(pos, 0, item2);
+          analytics.patches++;
+          push("glitch", `Compiler card: PATCH — inserts "${[item2.a,item2.paramWord,item2.target].filter(Boolean).join(" ")}" as the next command.`, {stackIndex:i});
+        } else if (card === "ROLLBACK"){
+          if (lastCmd){
+            const rev = {"GRASP":"RELEASE","RELEASE":"GRASP","MOVE":"MOVE BACK","ROTATE":"ROTATE OPPOSITE","SPIN":"SPIN OPPOSITE"}[lastCmd.a] || "UNDONE";
+            const txt = [lastCmd.a, lastCmd.paramWord, lastCmd.target].filter(Boolean).join(" ");
+            push("rollback", `Compiler card: ROLLBACK — the Robot undoes "${txt}" (${rev}).`, {stackIndex:i, posture});
+            wait(1.5);
+            if (lastCmd.required) executed--;
+            lastCmd = null;
+            analytics.rollbacks++;
+          } else {
+            push("glitch", `Compiler card: ROLLBACK — nothing to undo.`, {stackIndex:i});
+          }
+        }
+      }
     }
 
     if (posture === "standing"){
@@ -828,6 +877,7 @@ function buildDiagnostics(A){
   const avgUsed = A.rounds.length ? A.rounds.reduce((s,r)=>s+r.used,0)/A.rounds.length : 0;
   out.push(`<b>Assembly:</b> ${A.rounds.length} round(s) built; ${A.buildTimeouts} hit the 45s build timer; ${A.cardShortages} card shortage(s); ${A.jokersUsed} Joker(s), ${A.targetsUsed} Target(s), ${A.repeatBlocks} REPEAT block(s) used.`);
   out.push(`<b>Speed bonus:</b> ${A.bonus} token(s) earned from finishing with time to spare.`);
+  if (A.rollbacks || A.patches || A.buzzCards) out.push(`<b>Compiler cards:</b> ROLLBACK ${A.rollbacks||0} · PATCH ${A.patches||0} · BUZZER ${A.buzzCards||0}.`);
   const unused = Object.keys(A.deck).filter(w => !(A.plays[w] > 0));
   if (unused.length) out.push(`<b>Never played:</b> ${unused.join(", ")}. With the full deck, these are unused rather than undrawable — consider whether they earn their place.`);
   if (A.openings){
@@ -1009,6 +1059,10 @@ function applyEvent(ev){
     case "control":
       if (ui.stack && ev.stackIndex !== undefined) renderStack(ui.stack, ev.stackIndex, ev.stackIndex-1);
       break;
+    case "rollback":
+      if (ui.stack && ev.stackIndex !== undefined) renderStack(ui.stack, ev.stackIndex, ev.stackIndex);
+      setRobotState(PLAYERS[cfg.robot].name, "UNDOING last action");
+      break;
     case "beep":
       renderStack(ui.stack, ev.stackIndex+1>ui.stack.length-1?ui.stack.length-1:ev.stackIndex+1, ev.stackIndex);
       setRobotState(PLAYERS[cfg.robot].name, `"COMPLETE" (${ev.posture||"seated"})`);
@@ -1151,7 +1205,7 @@ function renderAnalytics(){
     </div>`;
 }
 
-const SIM_VERSION = "0.7.1";
+const SIM_VERSION = "0.7.2";
 
 function logLines(){
   return (ui.tape || []).map(ev => {
@@ -1205,6 +1259,7 @@ function download(name, text){
 function aggregateRuns(runs){
   const A = {
     sessions: runs.length, rounds:0, completed:0, timeouts:0, buildTimeouts:0, bonus:0,
+    rollbacks:0, patches:0, buzzCards:0,
     cardShortages:0, jokersUsed:0, targetsUsed:0, sensorsUsed:0, repeatBlocks:0,
     winners:{A:0,B:0,tie:0}, tokens:{A:0,B:0}, marginSum:0,
     usedSum:0, usedCount:0,
@@ -1218,6 +1273,7 @@ function aggregateRuns(runs){
     const a = r.analytics;
     A.rounds += a.rounds.length; A.completed += a.completed; A.timeouts += a.timeout;
     A.bonus += a.bonus||0;
+    A.rollbacks += a.rollbacks||0; A.patches += a.patches||0; A.buzzCards += a.buzzCards||0;
     A.buildTimeouts += a.buildTimeouts||0; A.cardShortages += a.cardShortages||0;
     A.jokersUsed += a.jokersUsed||0; A.targetsUsed += a.targetsUsed||0;
     A.sensorsUsed += a.sensorsUsed||0; A.repeatBlocks += a.repeatBlocks||0;
@@ -1255,6 +1311,7 @@ function buildAggregateDiagnostics(A){
   out.push(`<b>Wins:</b> Team A ${A.winners.A} · Team B ${A.winners.B} · ties ${A.winners.tie}. Avg tokens A ${A.avgTokensA.toFixed(1)}, B ${A.avgTokensB.toFixed(1)} · avg margin ${A.avgMargin.toFixed(1)}.`);
   out.push(`<b>Time:</b> average round spends ${A.avgUsed.toFixed(1)}s executing of the 60s budget.`);
   out.push(`<b>Assembly:</b> ${A.jokersUsed} Joker(s) · ${A.targetsUsed} Target(s) · ${A.repeatBlocks} REPEAT block(s) · ${A.cardShortages} card shortage(s) · ${A.bonus} speed bonus token(s).`);
+  out.push(`<b>Compiler cards:</b> ROLLBACK ${A.rollbacks} · PATCH ${A.patches} · BUZZER ${A.buzzCards}.`);
   {
     const ops = Object.entries(A.openings).sort((a,b)=>b[1]-a[1]);
     const total = ops.reduce((s,e)=>s+e[1],0);
