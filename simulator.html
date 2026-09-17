@@ -20,8 +20,9 @@
   .brand span{font-weight:400;color:var(--dim);font-size:13px;margin-left:6px}
   .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
   .controls label{display:flex;gap:5px;align-items:center;color:var(--dim);font-size:12px}
-  input[type=text],select{background:#0c1017;border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:6px 8px;font:inherit;font-size:12px}
+  input[type=text],input[type=number],select{background:#0c1017;border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:6px 8px;font:inherit;font-size:12px}
   input[type=text]{width:150px}
+  input[type=number]{width:58px}
   button{background:#22304a;border:1px solid #33456b;color:var(--ink);border-radius:7px;padding:7px 12px;font:inherit;font-size:12px;font-weight:600;cursor:pointer}
   button:hover{background:#2b3c5d}
   button.primary{background:var(--accent);border-color:var(--accent);color:#06101f}
@@ -119,6 +120,8 @@
     <label><input type="checkbox" id="eco"> Eco</label>
     <label><input type="checkbox" id="adv"> Advanced</label>
     <button id="reset">Reset</button>
+    <label>Batch <input type="number" id="batchn" value="20" min="1" max="200"></label>
+    <button id="batch">Run Batch</button>
   </div>
 </header>
 
@@ -301,8 +304,10 @@ function paramType(w){
   return "other";
 }
 
+const TIME_SCALE = 2;
+
 function reaction(base, player, rng){
-  return base * player.rt * rng.jit(0.16);
+  return base * TIME_SCALE * player.rt * rng.jit(0.16);
 }
 
 function buildCardInstances(cfg){
@@ -367,13 +372,17 @@ function simulate(cfg){
     props.buzzer = false;
     return ev;
   };
-  const wait = (d) => { T += Math.max(0.05, d); };
+  const wait = (d) => {
+    const step = Math.max(0.05, d);
+    T += step;
+    if (props.timerRunning && remaining !== null) remaining = Math.max(0, remaining - step);
+  };
 
   const analytics = {
     deck: deckCounts(cfg), draws:{}, plays:{}, wildcardUses:0, hands:0, unsolvable:0,
     missingByWord:{}, rounds:[], errors:{syntax:0,runtime:0,missed:0,safety:0},
     buzz:{used:0,refunded:0,missed:0}, overrule:0, glitch:0, compilerCards:0, completed:0, timeout:0,
-    paramSteps:0, paramDistinct:0, paramReuse:0, paramPoolHands:0, paramStarvedHands:0
+    paramSteps:0, paramDistinct:0, paramReuse:0, paramPoolHands:0, paramStarvedHands:0, challenges:{}
   };
 
   const codingDeck = [];
@@ -426,6 +435,8 @@ function simulate(cfg){
     push("roles", `Round ${round}: Team ${progLabel} programs (${progTeam.map(i=>PLAYERS[i].name).join(" + ")}); ${compTeam.map(i=>PLAYERS[i].name).join(" + ")} compiles. ${robotP.name} is the Robot.`, {roles});
 
     const challenge = chooseChallenge();
+    analytics.challenges[challenge.id] = analytics.challenges[challenge.id] || {drawn:0, completed:0};
+    analytics.challenges[challenge.id].drawn++;
     const hand = dealHand(8);
     analytics.hands++;
     push("draw", `Challenge drawn (#${challenge.id}, ${challenge.diff}) and kept hidden from ${robotP.name}. Hand: ${hand.filter(c=>c.cat!=="wild").length} cards + 2 wildcards.`, {challenge, hand});
@@ -544,7 +555,7 @@ function simulate(cfg){
 
       const rf = reaction(0.42, reader, rng);
       const words = actionWord.split(" ").length + (paramWord?2:0);
-      const readTime = (rf + words/2.5*reader.read*rng.jit(0.12)) * mult + addT;
+      const readTime = (rf + words/2.5*reader.read*rng.jit(0.12)*TIME_SCALE) * mult + addT;
       push("read", `${reader.name} reads "${cmd}" verbatim.`, {stackIndex:i, card:actionWord});
       wait(readTime);
 
@@ -568,7 +579,7 @@ function simulate(cfg){
         buzzRoll({type:"syntax", msg:"the card sequence is read out of order"}, i, progTeam, compTeam);
       }
 
-      const exec = (ACTION_TIME[entry.step.a]||1.4) * (0.75 + 0.25*robotP.rt) * rng.jit(0.14) * mult + addT;
+      const exec = (ACTION_TIME[entry.step.a]||1.4) * TIME_SCALE * (0.75 + 0.25*robotP.rt) * rng.jit(0.14) * mult + addT;
       push("execute", `${robotP.name} executes ${entry.step.a}${paramWord?" "+paramWord:""}.`, {stackIndex:i, card:actionWord});
       wait(exec);
 
@@ -588,6 +599,7 @@ function simulate(cfg){
       scores.team[progLabel] += 3;
       if (remaining > 0) scores.team[progLabel] += 1;
       analytics.completed++;
+      analytics.challenges[challenge.id].completed++;
       roundResult = {round, completed:true, used:timerStart-remaining, team:progLabel};
       push("complete", `Challenge COMPLETE with ${remaining.toFixed(1)}s to spare — ${progLabel==="A"?"Team A":"Team B"} scores +3 (+1 under time).`, {});
     } else if (remaining <= 0){
@@ -669,7 +681,7 @@ function buildDiagnostics(A){
 function fmt(n, d){ return Number(n).toFixed(d===undefined?1:d); }
 
 const ui = {
-  tape:null, analytics:null, idx:0, T:0, running:false, raf:null, last:0, revealed:new Set(), timerCap:90
+  tape:null, analytics:null, idx:0, T:0, running:false, raf:null, last:0, revealed:new Set(), timerCap:90, batching:false
 };
 
 function renderPlayers(roles){
@@ -944,7 +956,7 @@ function renderAnalytics(){
     </div>`;
 }
 
-const SIM_VERSION = "0.3.0";
+const SIM_VERSION = "0.3.1";
 
 function logLines(){
   return (ui.tape || []).map(ev => {
@@ -995,6 +1007,131 @@ function download(name, text){
   URL.revokeObjectURL(url);
 }
 
+function aggregateRuns(runs){
+  const A = {
+    sessions: runs.length, rounds:0, completed:0, timeouts:0,
+    winners:{A:0,B:0,tie:0}, tokens:{A:0,B:0}, marginSum:0,
+    usedSum:0, usedCount:0,
+    errors:{syntax:0,runtime:0,missed:0,safety:0},
+    buzz:{used:0,refunded:0,missed:0}, overrule:0,
+    glitch:0, compilerCards:0, wildcardUses:0, unsolvable:0, hands:0,
+    missingTotal:0, missingByWord:{},
+    paramSteps:0, paramDistinct:0, paramReuse:0, paramPoolHands:0, paramStarvedHands:0,
+    cards:{}, challenges:{}
+  };
+  runs.forEach(r => {
+    const a = r.analytics;
+    A.rounds += a.rounds.length; A.completed += a.completed; A.timeouts += a.timeout;
+    if (A.winners[a.winner] !== undefined) A.winners[a.winner]++;
+    A.tokens.A += a.finalScores.team.A; A.tokens.B += a.finalScores.team.B;
+    A.marginSum += Math.abs(a.finalScores.team.A - a.finalScores.team.B);
+    a.rounds.forEach(rd => { A.usedSum += rd.used; A.usedCount++; });
+    ["syntax","runtime","missed","safety"].forEach(k => { A.errors[k] += a.errors[k]||0; });
+    ["used","refunded","missed"].forEach(k => { A.buzz[k] += a.buzz[k]||0; });
+    A.overrule += a.overrule; A.glitch += a.glitch; A.compilerCards += a.compilerCards;
+    A.wildcardUses += a.wildcardUses; A.unsolvable += a.unsolvable; A.hands += a.hands;
+    A.missingTotal += a.missingTotal;
+    A.paramSteps += a.paramSteps; A.paramDistinct += a.paramDistinct; A.paramReuse += a.paramReuse;
+    A.paramPoolHands += a.paramPoolHands; A.paramStarvedHands += a.paramStarvedHands;
+    Object.keys(a.deck).forEach(w => {
+      const c = A.cards[w] || (A.cards[w] = {deck:a.deck[w], drawn:0, played:0});
+      c.drawn += a.draws[w]||0; c.played += a.plays[w]||0;
+    });
+    Object.keys(a.missingByWord||{}).forEach(w => { A.missingByWord[w] = (A.missingByWord[w]||0) + a.missingByWord[w]; });
+    Object.keys(a.challenges||{}).forEach(id => {
+      const c = A.challenges[id] || (A.challenges[id] = {drawn:0, completed:0});
+      c.drawn += a.challenges[id].drawn; c.completed += a.challenges[id].completed;
+    });
+  });
+  A.avgUsed = A.usedCount ? A.usedSum/A.usedCount : 0;
+  A.avgTokensA = A.sessions ? A.tokens.A/A.sessions : 0;
+  A.avgTokensB = A.sessions ? A.tokens.B/A.sessions : 0;
+  A.avgMargin = A.sessions ? A.marginSum/A.sessions : 0;
+  A.completionRate = A.rounds ? A.completed/A.rounds : 0;
+  A.neverDrawn = Object.keys(A.cards).filter(w => A.cards[w].drawn===0);
+  A.drawnNotPlayed = Object.keys(A.cards).filter(w => A.cards[w].drawn>0 && A.cards[w].played===0);
+  A.diagnostics = buildAggregateDiagnostics(A);
+  return A;
+}
+
+function buildAggregateDiagnostics(A){
+  const out = [];
+  out.push(`<b>Batch:</b> ${A.sessions} sessions · ${A.rounds} rounds · completion ${A.completed}/${A.rounds} (${Math.round(100*A.completionRate)}%) · ${A.timeouts} timeout(s).`);
+  out.push(`<b>Wins:</b> Team A ${A.winners.A} · Team B ${A.winners.B} · ties ${A.winners.tie}. Avg tokens A ${A.avgTokensA.toFixed(1)}, B ${A.avgTokensB.toFixed(1)} · avg margin ${A.avgMargin.toFixed(1)}.`);
+  out.push(`<b>Time:</b> average round consumes ${A.avgUsed.toFixed(1)}s of the 90s budget.`);
+  if (A.missingTotal > 0){
+    const top = Object.entries(A.missingByWord).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([w,n])=>`${w} (${n})`).join(", ");
+    out.push(`<b>Constraints:</b> ${A.missingTotal} required card(s) absent across hands. Most-missing: ${top}.`);
+  }
+  if (A.unsolvable > 0) out.push(`<b>Solvability:</b> ${A.unsolvable}/${A.hands} hands (${Math.round(100*A.unsolvable/A.hands)}%) unsatisfiable even with both wildcards.`);
+  if (A.paramSteps > 0) out.push(`<b>Pairing:</b> ${A.paramSteps} movement steps · ${A.paramDistinct} distinct params · ${A.paramReuse} reused · ${A.paramStarvedHands} starved hand(s).`);
+  if (A.neverDrawn.length) out.push(`<b>Never drawn:</b> ${A.neverDrawn.join(", ")}.`);
+  if (A.drawnNotPlayed.length) out.push(`<b>Drawn but never played:</b> ${A.drawnNotPlayed.join(", ")}.`);
+  out.push(`<b>Errors:</b> syntax ${A.errors.syntax} · runtime ${A.errors.runtime} · missed ${A.errors.missed} · safety ${A.errors.safety} · buzzes ${A.buzz.used} · overrules ${A.overrule}.`);
+  if (A.glitch === 0) out.push(`<b>Glitch deck idle:</b> no Glitch cards entered play across the batch.`);
+  if (A.buzz.used === 0) out.push(`<b>Compiler idle:</b> no valid buzzes across the batch.`);
+  return out;
+}
+
+function renderBatchReport(A, meta){
+  const pills = `<span class="pill">${A.sessions} sessions</span><span class="pill">${A.completed}/${A.rounds} completed</span><span class="pill">${A.timeouts} timeouts</span><span class="pill">A ${A.winners.A} · B ${A.winners.B} · tie ${A.winners.tie}</span><span class="pill">avg ${A.avgUsed.toFixed(0)}s/round</span>`;
+  const cardRows = Object.keys(A.cards).map(w => {
+    const c = A.cards[w];
+    return `<tr><td>${w}</td><td class="n">${c.deck}</td><td class="n">${c.drawn}</td><td class="n">${c.played}</td></tr>`;
+  }).join("");
+  const chRows = Object.keys(A.challenges).sort((a,b)=>Number(a)-Number(b)).map(id => {
+    const c = A.challenges[id];
+    return `<tr><td>#${id}</td><td class="n">${c.drawn}</td><td class="n">${c.completed}</td><td class="n">${c.drawn?Math.round(100*c.completed/c.drawn):0}%</td></tr>`;
+  }).join("");
+  const diag = A.diagnostics.map(d => `<div class="diag">${d}</div>`).join("");
+  $("#analyticsbody").innerHTML = `
+    <div style="margin-bottom:8px">${pills}</div>
+    ${diag}
+    <table>
+      <tr><th>Challenge</th><th class="n">Drawn</th><th class="n">Completed</th><th class="n">Rate</th></tr>
+      ${chRows}
+    </table>
+    <table style="margin-top:8px">
+      <tr><th>Card</th><th class="n">Deck</th><th class="n">Drawn</th><th class="n">Played</th></tr>
+      ${cardRows}
+    </table>
+    <div class="muted" style="margin-top:8px;font-size:11px">base seed ${meta.baseSeed} · eco ${meta.eco} · advanced ${meta.adv}</div>`;
+}
+
+function runBatch(){
+  if (ui.batching) return;
+  const n = Math.max(1, Math.min(200, parseInt($("#batchn").value, 10) || 20));
+  const baseSeed = ($("#seed").value || "batch").trim() || "batch";
+  const eco = $("#eco").checked, adv = $("#adv").checked;
+  cancelAnimationFrame(ui.raf);
+  ui.running = false;
+  $("#run").textContent = "Run";
+  ui.batching = true;
+  const btn = $("#batch");
+  btn.disabled = true;
+  const runs = [];
+  let i = 0;
+  function chunk(){
+    const end = Math.min(n, i + 5);
+    for (; i < end; i++){
+      const seed = `${baseSeed}-${i+1}`;
+      const sim = simulate({seed, eco, adv, robot:"quentin"});
+      runs.push({seed, analytics: sim.analytics});
+    }
+    btn.textContent = `Batch ${i}/${n}…`;
+    $("#analyticsbody").innerHTML = `<span class="muted">Running batch ${i}/${n}…</span>`;
+    if (i < n){ setTimeout(chunk, 0); return; }
+    const aggregate = aggregateRuns(runs);
+    const meta = {tool:"iRobot Session Simulator", version:SIM_VERSION, baseSeed, eco, adv, robot:"quentin", count:n, generated:new Date().toISOString()};
+    download(`irobot-batch-${baseSeed}-x${n}.json`, JSON.stringify({meta, aggregate, runs}, null, 2));
+    renderBatchReport(aggregate, meta);
+    btn.textContent = "Run Batch";
+    btn.disabled = false;
+    ui.batching = false;
+  }
+  chunk();
+}
+
 const cfg = {seed:"irobot-0001", eco:false, adv:false, robot:"quentin"};
 function syncCfg(){
   cfg.seed = $("#seed").value; cfg.eco = $("#eco").checked; cfg.adv = $("#adv").checked; cfg.robot = "quentin";
@@ -1010,6 +1147,7 @@ $("#adv").addEventListener("change", startSim);
 $("#explog").addEventListener("click", exportLog);
 $("#expjson").addEventListener("click", exportJSON);
 $("#expcsv").addEventListener("click", exportCSV);
+$("#batch").addEventListener("click", runBatch);
 
 (function init(){
   const q = new URLSearchParams(location.search).get("seed");
