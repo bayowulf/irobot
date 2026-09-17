@@ -8,11 +8,9 @@
 ![Play time: 30-60 min](https://img.shields.io/badge/PLAY_TIME-30--60_MIN-blue?style=for-the-badge)
 ![Ages: 9+](https://img.shields.io/badge/AGES-9%2B-orange?style=for-the-badge)
 ![Format: Print & Play](https://img.shields.io/badge/FORMAT-PRINT_%26_PLAY-brightgreen?style=for-the-badge)
-![Version: v0.1.1](https://img.shields.io/badge/VERSION-v0.1.1-informational?style=for-the-badge)
+![Version: v0.2.1](https://img.shields.io/badge/VERSION-v0.2.1-informational?style=for-the-badge)
 
 **Share link:** https://github.com/bayowulf/irobot
-
-**▶ [Launch the Session Simulator](simulator.html)** · **[Read the Rulebook](https://github.com/bayowulf/irobot#-irobot-the-human-logic-party-game)**
 
 </div>
 
@@ -21,11 +19,15 @@
 > install or download. Scroll down, print the cards in §12, grab a timer, and play.
 
 > [!NOTE]
-> **Balance testing:** open [`simulator.html`](simulator.html) to run seeded, simulated
-> sessions with five virtual players — Alice, Bob, Verity, Julius, and Quentin — complete
+> **Balance testing (local only):** clone or download this repo, then double-click
+> **`run-simulator.bat`** to launch the session simulator in your browser. It runs seeded,
+> simulated sessions with five virtual players — Alice, Bob, Verity, Julius, and Quentin —
 > with modeled human reaction times, the timer, buzz/Overrule tokens, and the Glitch and
 > Compiler decks. Each run produces a **balance report** on card counts, dead draws, and
 > Challenge solvability to guide deck rebalancing.
+>
+> *The simulator is a browser-only tool and cannot be launched from the GitHub web view —
+> run it from a local copy of the repo.*
 
 A print-and-play party game of literal logic, physical comedy, and programming panic for
 **5 players** — built for one 9-year-old + two parents + two grandparents.
