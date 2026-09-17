@@ -8,7 +8,7 @@
 ![Play time: 30-60 min](https://img.shields.io/badge/PLAY_TIME-30--60_MIN-blue?style=for-the-badge)
 ![Ages: 9+](https://img.shields.io/badge/AGES-9%2B-orange?style=for-the-badge)
 ![Format: Print & Play](https://img.shields.io/badge/FORMAT-PRINT_%26_PLAY-brightgreen?style=for-the-badge)
-![Version: v0.5.0](https://img.shields.io/badge/VERSION-v0.5.0-informational?style=for-the-badge)
+![Version: v0.6.0](https://img.shields.io/badge/VERSION-v0.6.0-informational?style=for-the-badge)
 
 **Share link:** https://github.com/bayowulf/irobot
 
@@ -44,8 +44,8 @@ teams: the **Programmers**, who feed the Robot card commands one line at a time,
 1. Pick one player as the **Robot** — they're neutral, and they keep the role for a whole
    session (4 rounds).
 2. The other four split into **two teams of two**. Team A programs first; Team B compiles.
-3. Programmers draw a Challenge and a shared hand of cards.
-4. Lay cards in a stack, say **"RUN,"** and start the timer (90 seconds).
+3. Programmers draw a Challenge and take the **entire coding deck** plus **2 jokers**.
+4. Assemble a program, say **"RUN,"** then execute it one command at a time.
 5. Read one card at a time, **verbatim**. The Robot does it, stops, and beeps.
 6. The Compiler buzzes on real errors. Highest team total after 4 rounds wins the session.
 7. Hand the Robot to the next player, re-assemble the teams, and reset the team score.
@@ -109,7 +109,7 @@ Gather these before the first session. None of them are printed cards.
 
 | Item | Qty | Notes |
 | --- | --- | --- |
-| Timer (phone or stopwatch) | 1 | 90 seconds standard · 120 seconds in Eco Mode (§10). |
+| Timer (phone or stopwatch) | 1 | Two phases: **build 90s** then **execute 60s**. Eco: 120s / 90s (§10). |
 | Buzzer (or a bell) | 1 | The Compiler's "COMPILER ERROR!" slam (§6). |
 | Buzz tokens (coins/chips) | 3 | The Compiler's buzzes, per round. |
 | Overrule token (a different coin) | 1 | Programmers, cancels one buzz per round. |
@@ -123,8 +123,9 @@ Gather these before the first session. None of them are printed cards.
 | Starting-spot marker | 1 | Tape or paper marking where the Robot began. |
 | Obstacle / wall | optional | Something to trigger an OutOfBounds error (§6). |
 
-> Everything else is a card: the Coding deck, the Glitch deck, the Compiler cards, and the
-> Wildcards — print those from §12.
+> Everything else is a card: the Coding deck (including its 2 **Jokers**), the Glitch deck,
+> and the Compiler cards — print those from §12. A card tray or two helps keep ~60 pieces
+> organized.
 
 ---
 
@@ -134,28 +135,34 @@ Gather these before the first session. None of them are printed cards.
 | --- | --- |
 | Robot | Choose the neutral Robot. Keep the Challenge out of their sight and earshot. |
 | Teams | Split the other four into two teams of two. Sit so the Compiler can see the Robot. |
-| Timer | 90 seconds standard (use a phone). |
-| Programmer hand | Deal a shared hand of **8 cards**, face up, drawn blind from the shuffled deck. Plus **2 wildcards** (blank = any one Action or Parameter). |
+| Timer | Two phases: **build 90 seconds**, then **execute 60 seconds** (use a phone). |
+| Programmer deck | The **entire coding deck**, face up, plus **2 Jokers** (stand in for any one card). No hand is dealt — every card is available. |
 | Programmer kit | **1 Overrule token** (cancels one buzz per round). |
 | Compiler kit | **3 buzz tokens**, the Glitch deck, and the Compiler cards. |
 | Challenge | Draw 1 Challenge card. Keep it hidden from the Robot. |
-| Difficulty | Base deck only. The **Advanced deck is off** unless the table agrees (see §12). |
+| Difficulty | Advanced cards are **in** the deck. Use Eco Mode (§10) or remove the Advanced cards for an easier table. |
 
 ---
 
 ## 🔁 4. Round Flow
 
-1. **Draw & Draft** — the Programmers read the Challenge (silently, away from the Robot)
-   and look at their hand.
-2. **Build the Stack** — lay the cards in execution order, top to bottom. Every movement
+1. **Reveal the Challenge** — the Programmers read the Challenge (silently, away from the
+   Robot) and take the **entire coding deck** plus the 2 Jokers. The **build timer starts
+   (90 seconds)**.
+2. **Assemble a Program** — lay cards top-to-bottom in execution order. Every movement
    Action (MOVE, ROTATE, SPIN) must be paired with a Parameter card (see The Pairing Rule).
-3. **Press RUN** — say "RUN." The round timer starts. It is a **hard limit**: start it once
-   and let it run to zero — you never add or subtract time.
-4. **Serial Streaming** — read one card aloud, **verbatim**, one at a time. Wait for the
-   Robot to finish and beep before reading the next card.
+   Targets and Sensors are optional modifiers; `REPEAT` wraps a sub-stack block.
+3. **Press RUN** — when ready, say "RUN." The program is now frozen and the **execute timer
+   starts (60 seconds)**.
+4. **Serial Streaming** — read one command group aloud, **verbatim**, at a time. Wait for the
+   Robot to finish and beep before reading the next command.
 5. **COMPLETE** — the Robot beeps (or says "COMPLETE") after each command.
-6. **Score** — the round ends when the Challenge is done, the timer runs out, or the
-   Programmers call "STOP." Finishing the Challenge always means finishing before zero.
+6. **Score** — the round ends when the Challenge is done, the execute timer runs out, or the
+   Programmers call "STOP."
+
+Both timers are **hard limits**: start each once and let it run to zero — you never add or
+subtract time. If the **build timer runs out before RUN**, the Programmers must call RUN
+immediately and execute whatever is on the table (an incomplete program usually fails).
 
 ### The Pairing Rule
 
@@ -167,7 +174,16 @@ movement Action is a **Syntax Error** (§6).
 - Parameters are **reusable**: one Parameter card may serve any number of movement Actions
   in a round and is never consumed.
 
-### Editing the stack
+### Targets, Sensors & REPEAT
+
+- **Targets are optional modifiers.** `GRASP` alone uses the literal default (closed fist);
+  `GRASP` + `THE BALL` grasps the ball. Place the Target card with the Action it modifies.
+- **Sensors qualify control flow.** `IF / THEN` and `WHILE` read a Sensor to decide whether
+  their block runs.
+- **`REPEAT N TIMES` wraps a sub-stack block** — lay the block once beside/below the REPEAT
+  card and it executes N times. This is how you repeat a sequence without extra card copies.
+
+### Editing the program
 - **Before RUN:** change anything you like.
 - **After RUN:** you may **not** edit cards, except immediately after a Compiler Error
   (see §6).
@@ -194,18 +210,19 @@ The Compiler slams the buzzer and yells **"COMPILER ERROR!"** The Robot freezes 
 
 ### Valid errors (checkable, not a judgment call)
 - **Syntax Error** — a card read out of order; a movement Action (MOVE/ROTATE/SPIN) with
-  no paired Parameter; a word that isn't printed on a card.
+  no paired Parameter; a `REPEAT`/`WHILE`/`IF` with no sub-stack block; a word that isn't
+  printed on a card.
 - **Runtime Error** — walking into a wall (OutOfBounds), grasping empty air (Null
   Pointer), or attempting a physical impossibility.
 - **Not an error** — the Robot being slow, clumsy-but-safe, or "looking silly." Comedy is
-  not a bug.
+  not a bug. Spending the whole build timer without a perfect program is also not an error.
 
 ### Buzz & Overrule procedure
 1. Compiler spends **1 buzz token** and states the error in one sentence.
 2. Programmers may spend their **Overrule token** (1 per round) to cancel it.
    - The Compiler's buzz token is refunded, nothing is lost, and play resumes.
 3. Otherwise it's a **valid catch.** The Robot **freezes in place for 10 seconds while the
-   round timer keeps running**, and the Programmers lose **−1 team token**. They may fix
+   execute timer keeps running**, and the Programmers lose **−1 team token**. They may fix
    exactly the offending cards, then resume from the last completed command.
 
 The Compiler has **3 buzzes per round** and the Programmers have **1 Overrule** — no spam,
@@ -241,10 +258,10 @@ night).
   buzz; the Compiler loses nothing.
 - The **Good Robot** bonus keeps the neutral Robot trying instead of trolling.
 
-> **Why tokens and not clock math:** the timer only starts at RUN and stops at zero — nobody
+> **Why tokens and not clock math:** each timer only starts once and stops at zero — nobody
 > ever adds or subtracts time. A valid catch costs a **token** and a literal **10-second
-> freeze** (the clock keeps running while the Robot stands still), so mixed ages just track
-> tokens on the table instead of doing arithmetic on a countdown.
+> freeze** (the execute clock keeps running while the Robot stands still), so mixed ages
+> just track tokens on the table instead of doing arithmetic on a countdown.
 
 ---
 
@@ -278,10 +295,10 @@ Use **Eco Mode** (§10) for a gentler round.
 
 For a grandparent, an injured player, or a tired kid.
 
-- When Eco Mode is on, **at least half the cards in the stack must be seated/arm-only**
+- When Eco Mode is on, **at least half the cards in the program must be seated/arm-only**
   (RAISE ARM, LOWER ARM, GRASP, RELEASE, POINT, LOOK, BEEP, FREEZE, OPEN MOUTH).
-- If the round timer is tight, set a longer limit up front (**120 seconds** instead of 90).
-  The limit is chosen before RUN — it is never extended mid-round.
+- Eco Mode also lengthens both timers: **build 120 seconds, execute 90 seconds**. Limits are
+  chosen up front and never extended mid-round.
 
 ---
 
@@ -290,7 +307,7 @@ For a grandparent, an injured player, or a tired kid.
 | Mode | How it works | Best for |
 | --- | --- | --- |
 | **Step Mode** (default) | Read one card, Robot executes, beep, next card. | First games, young/older players. |
-| **Script Mode** | Read the whole stack once, then the Robot executes it from memory without stopping. | Chaos, big laughs, confident players. |
+| **Script Mode** | Read the whole program once, then the Robot executes it from memory without stopping. | Chaos, big laughs, confident players. |
 
 The table picks per round. Script Mode is harder — award it **+1 bonus** if completed.
 
@@ -301,6 +318,10 @@ The table picks per round. Script Mode is harder — award it **+1 bonus** if co
 Print each category on its own color. If you can't print in color, write the color word
 in the corner. Symbols are hints, not requirements.
 
+The Blue, Orange, Green, Yellow, and Purple decks are the **Programmers' coding deck** —
+all of it is available to them every round. The Red and Compiler cards belong to the
+Compiler.
+
 ### Blue — Action
 | Count | Word | Icon hint | Difficulty |
 | --- | --- | --- | --- |
@@ -309,7 +330,7 @@ in the corner. Symbols are hints, not requirements.
 | 2 | RAISE ARM | up arrow + arm | Base |
 | 2 | LOWER ARM | down arrow + arm | Base |
 | 3 | GRASP | closing fist | Base |
-| 2 | RELEASE | open hand | Base |
+| 3 | RELEASE | open hand | Base |
 | 1 | POINT | pointing hand | Base |
 | 1 | LOOK | eye | Base |
 | 1 | BEEP | speaker | Base |
@@ -344,6 +365,9 @@ in the corner. Symbols are hints, not requirements.
 | 1 | THE BALL | circle | Base |
 | 1 | THE BOX | box | Base |
 
+> **Targets are optional modifiers.** Place one beside an Action to specify *what* it acts
+> on. With no Target, the Robot uses the literal default (`GRASP` = closed fist).
+
 ### Yellow — Sensor
 | Count | Word | Icon hint | Difficulty |
 | --- | --- | --- | --- |
@@ -351,6 +375,9 @@ in the corner. Symbols are hints, not requirements.
 | 1 | TOUCH SENSOR = PRESSED | finger tap | Base |
 | 1 | HEAR SOUND = YES | ear | Base |
 | 1 | NO OBSTACLE | clear path | Base |
+
+> **Sensors are optional modifiers.** Place one beside `IF / THEN` or `WHILE` to set the
+> condition that block tests.
 
 ### Red — Glitch (Compiler draws and injects)
 | Count | Word | Effect |
@@ -364,7 +391,7 @@ in the corner. Symbols are hints, not requirements.
 | 1 | OVERHEAT | Fan yourself with both hands. |
 | 1 | SOFTWARE UPDATE | Stand still and hum until the next card. |
 
-### Purple — Advanced (optional, otherwise keep in the box)
+### Purple — Advanced (in the deck)
 | Count | Word | Difficulty |
 | --- | --- | --- |
 | 2 | REPEAT 3 TIMES | Base-friendly |
@@ -373,21 +400,22 @@ in the corner. Symbols are hints, not requirements.
 | 1 | IF / THEN | Advanced |
 | 1 | ELSE | Advanced |
 
-> Keep REPEAT in the base game — it's easy and funny. Add WHILE/IF-THEN only when the
-> table is ready.
+> **`REPEAT N TIMES` wraps a sub-stack block:** lay the block once beside/below the REPEAT
+> card and it runs N times — the way to repeat without extra copies. `WHILE`/`IF` read a
+> paired Sensor. Remove the Advanced cards for a gentler table (or use Eco Mode, §10).
 
 ### Compiler Cards
 | Count | Card | Effect |
 | --- | --- | --- |
 | 1 | BUZZER | Standard buzz (uses a buzz token). |
-| 2 | BUG INJECTION | Add one Glitch card to the Programmers' stack, mid-run. |
+| 2 | BUG INJECTION | Add one Glitch card to the Programmers' program, mid-run. |
 | 1 | PATCH | Force the Programmers to add one legal command of your choice. |
 | 1 | ROLLBACK | Undo the Robot's last completed action. |
 
-### Wildcards
+### Jokers
 | Count | Card | Effect |
 | --- | --- | --- |
-| 2 | BLANK | Counts as any ONE Action or Parameter card. |
+| 2 | JOKER | Stands in for any ONE card (Action, Parameter, Target, or Sensor). |
 
 ---
 
@@ -396,8 +424,8 @@ in the corner. Symbols are hints, not requirements.
 Keep the Challenge hidden from the Robot. Difficulty is a suggestion — scale to the table.
 
 **Each Challenge is a goal, not a script.** The Programmers may solve it with **any legal
-card order** that gets the job done — the wording describes the outcome, not a required
-sequence. Different hands should be solved differently.
+program** that gets the job done — the wording describes the outcome, not a required
+sequence. Different teams should build different programs.
 
 ### Easy
 1. Pick up the ball and put it in the box.
@@ -419,10 +447,14 @@ sequence. Different hands should be solved differently.
 13. Hand the cup to every human in the room, one at a time.
 14. Move to the table, grasp the glass, and return it to the robot's starting spot.
 
-### Script Mode only (execute the whole stack without stopping)
+### Script Mode only (execute the whole program without stopping)
 15. Pick up two objects and stack them.
 16. Collect one object from each human and deposit them in the box.
 17. Move, rotate, grasp, release, and beep — in exactly that order, twice.
+
+> With the full deck available, difficulty comes from **program length and order**, not from
+> what you happened to draw. Long Challenges can be built with `REPEAT` blocks instead of
+> extra copies.
 
 ---
 
@@ -451,6 +483,11 @@ Compiler (other team, buzzes and injects Glitches).
 **Session:** 4 rounds; teams swap Programmer/Compiler each round. Reset team tokens for a
 new Robot. Early end only by unanimous consent.
 
+**Programmers' deck:** the whole coding deck + 2 Jokers, every round. No hand is dealt.
+
+**Timers:** build 90s (assemble the program) then execute 60s (run it). Eco: 120s / 90s.
+Both are hard limits; if the build timer expires, RUN immediately with what's on the table.
+
 **Legal spoken words:** only card words + **RUN**, **COMPLETE**, **STOP**.
 
 **Team scoring (resets each session):** complete Challenge +3 · valid error −1 · Compiler
@@ -464,12 +501,14 @@ valid catch +2. Never below zero.
 
 **Buzz rules:** Compiler gets 3 buzzes per round; Programmers get 1 Overrule token.
 Programmers may spend the Overrule to cancel one buzz (no penalty, Compiler refunded).
-Otherwise a buzz = a **10-second Robot freeze while the clock runs**, plus −1 team token.
-
-**Timer:** a hard limit only — start at RUN, finish at zero. No adding or subtracting time.
+Otherwise a buzz = a **10-second Robot freeze while the execute clock runs**, plus −1 token.
 
 **Pairing:** every **MOVE**, **ROTATE**, or **SPIN** needs a paired Parameter card. Any
 Parameter works, and Parameters are reusable within a round (§4).
+
+**Modifiers:** Targets specify *what* an Action acts on (optional); Sensors set the condition
+for `IF`/`WHILE` (optional). `REPEAT N TIMES` wraps a sub-stack block. Jokers stand in for
+any one card.
 
 **Default robot behaviors:** GRASP with no target = closed fist · MOVE with no distance =
 no movement (that's an error) · undefined actions revert to the most mechanical version.
@@ -477,7 +516,7 @@ no movement (that's an error) · undefined actions revert to the most mechanical
 **Safety:** "WILL CAUSE INJURY" is always valid, always free. Then replace the command and
 continue.
 
-**Eco Mode:** at least half the stack is seated/arm-only.
+**Eco Mode:** at least half the program is seated/arm-only; timers 120s / 90s.
 
 **Modes:** Step = one card at a time. Script = memorize and execute without stopping
 (+1 bonus).

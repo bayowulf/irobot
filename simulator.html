@@ -137,12 +137,12 @@
     <div class="card">
       <h3>Props (physical components)</h3>
       <div class="props">
-        <div class="prop"><div class="k">Timer</div><div class="v" id="p-timer">90.0s</div></div>
+        <div class="prop"><div class="k">Execute timer</div><div class="v" id="p-timer">60.0s</div></div>
         <div class="prop"><div class="k">Buzz tokens</div><div class="v" id="p-buzz">3</div></div>
         <div class="prop"><div class="k">Overrule</div><div class="v" id="p-over">1</div></div>
         <div class="prop"><div class="k">Glitch deck</div><div class="v" id="p-glitch">8</div></div>
         <div class="prop"><div class="k">Compiler cards</div><div class="v" id="p-comp">5</div></div>
-        <div class="prop"><div class="k">Wildcards</div><div class="v" id="p-wild">2</div></div>
+        <div class="prop"><div class="k">Jokers</div><div class="v" id="p-wild">2</div></div>
       </div>
       <div class="buzzer" id="buzzer" style="margin-top:8px">COMPILER BUZZER</div>
       <div class="muted" style="margin-top:8px;font-size:11px">Table props: glass · ball · box · table · hat</div>
@@ -162,9 +162,9 @@
       </div>
     </div>
     <div class="card">
-      <h3>Programmers' Hand <span class="tag" id="handlbl"></span></h3>
+      <h3>Programmers' Deck <span class="tag" id="handlbl"></span></h3>
       <div class="hand" id="hand"></div>
-      <h3 style="margin-top:12px">Built Stack</h3>
+      <h3 style="margin-top:12px">Program (top → bottom)</h3>
       <div class="stack" id="stack"></div>
       <div class="robotbox"><div class="who" id="robotwho">Robot</div><div id="robotstate">standing by</div></div>
     </div>
@@ -397,33 +397,68 @@ function deckCounts(cfg){
   return counts;
 }
 
-function analyzeHand(hand, sig, rng){
-  const used = new Set();
-  const stack = [];
-  const missing = [];
-  const paramsUsed = new Set();
-  let wilds = 0;
-  const find = (pred) => { for (const c of hand){ if (!used.has(c.uid) && pred(c)) return c; } return null; };
-  const takeWild = () => { const w = find(c => c.cat==="wild"); if (w){ used.add(w.uid); wilds++; } return w; };
+const TARGET_WORDS = ["OBJECT IN FRONT","NEAREST SURFACE","NEAREST HUMAN","MY OTHER HAND","THE GLASS","THE BALL","THE BOX"];
+const SENSOR_WORDS = ["DISTANCE < 6 INCHES","TOUCH SENSOR = PRESSED","HEAR SOUND = YES","NO OBSTACLE"];
+const PARAM_WORDS = {dist:["1 STEP","2 STEPS"], angle:["90 DEGREES","180 DEGREES"], dir:["LEFT","RIGHT","FORWARD"]};
 
-  for (const step of sig){
-    const entry = {step, actionCard:null, actionWild:false, paramCard:null, paramWild:false, missingAction:null, missingParam:null};
-    let ac = find(c => c.cat==="action" && c.word===step.a);
-    if (ac) used.add(ac.uid);
-    else { ac = takeWild(); if (ac) entry.actionWild = true; }
-    entry.actionCard = ac;
-    if (!ac){ entry.missingAction = step.a; missing.push({word:step.a, type:"action"}); }
-    if (step.p){
-      let pc = find(c => c.cat==="param");
-      if (pc) paramsUsed.add(pc.uid);
-      else { pc = takeWild(); if (pc){ entry.paramWild = true; paramsUsed.add(pc.uid); } }
-      entry.paramCard = pc;
-      if (!pc){ entry.missingParam = step.p; missing.push({word:"param:"+step.p, type:"param"}); }
-    }
-    stack.push(entry);
+function collapseRepeats(steps){
+  const key = s => s.a + "|" + (s.p||"") + "|" + (s.d||"");
+  const n = steps.length;
+  for (let p=1; p<=Math.floor(n/2); p++){
+    if (n % p) continue;
+    let ok = true;
+    for (let i=p;i<n;i++){ if (key(steps[i]) !== key(steps[i-p])){ ok=false; break; } }
+    if (ok) return [{kind:"repeat", n:n/p, body:steps.slice(0,p).map(s => ({kind:"cmd", step:s}))}];
   }
-  const leftovers = hand.filter(c => !used.has(c.uid));
-  return {stack, missing, wilds, leftovers, paramsUsed: paramsUsed.size};
+  return steps.map(s => ({kind:"cmd", step:s}));
+}
+
+function walkNodes(nodes, fn){
+  nodes.forEach(nd => { fn(nd); if (nd.body) walkNodes(nd.body, fn); });
+}
+
+function assembleProgram(challenge, cfg, rng, reader){
+  const sig = rng.pick(challenge.sigs);
+  const roots = collapseRepeats(sig);
+  walkNodes(roots, nd => {
+    if (nd.kind === "cmd" && nd.step.p) nd.paramWord = rng.pick(PARAM_WORDS[nd.step.p] || ["1 STEP"]);
+  });
+  let targets = 0;
+  walkNodes(roots, nd => {
+    if (nd.kind === "cmd" && ["GRASP","RELEASE","POINT","LOOK"].includes(nd.step.a) && rng.chance(0.4)){
+      nd.target = rng.pick(TARGET_WORDS); targets++;
+    }
+  });
+  let sensors = 0;
+  if (rng.chance(0.25)){
+    const cmd = roots.find(nd => nd.kind === "cmd");
+    if (cmd){ roots[roots.indexOf(cmd)] = {kind:"if", sensor:rng.pick(SENSOR_WORDS), body:[cmd]}; sensors++; }
+  }
+  const deck = deckCounts(cfg);
+  const used = {};
+  walkNodes(roots, nd => { if (nd.kind === "cmd") used[nd.step.a] = (used[nd.step.a]||0)+1; });
+  let jokers = 0, shortage = 0;
+  Object.keys(used).forEach(a => {
+    const over = used[a] - (deck[a]||0);
+    if (over > 0){ const useJ = Math.min(over, 2 - jokers); jokers += useJ; shortage += over - useJ; }
+  });
+  let cards = 0, controls = 0;
+  walkNodes(roots, nd => { if (nd.kind === "cmd") cards++; else controls++; });
+  const assemblyTime = cards * (pickup(reader, rng) + 0.4) + controls * 1.0 + rng.range(1, 3);
+  return {sig, roots, cardCount:cards, controlCount:controls, assemblyTime, targets, sensors, jokers, shortage};
+}
+
+function expandProgram(roots, rng){
+  const out = [];
+  (function walk(list, repeated){
+    list.forEach(nd => {
+      if (nd.kind === "cmd") out.push({a:nd.step.a, p:nd.step.p, d:nd.step.d, target:nd.target||null, paramWord:nd.paramWord||null, repeated});
+      else if (nd.kind === "repeat"){ for (let i=0;i<nd.n;i++) walk(nd.body, true); }
+      else if (nd.kind === "if"){ if (rng.chance(0.7)) walk(nd.body, repeated); }
+      else walk(nd.body, repeated);
+    });
+  })(roots, false);
+  return out;
 }
 
 function simulate(cfg){
@@ -452,34 +487,13 @@ function simulate(cfg){
   };
 
   const analytics = {
-    deck: deckCounts(cfg), draws:{}, plays:{}, wildcardUses:0, hands:0, unsolvable:0,
-    missingByWord:{}, rounds:[], errors:{syntax:0,runtime:0,missed:0,safety:0},
+    deck: deckCounts(cfg), plays:{}, jokersUsed:0, targetsUsed:0, sensorsUsed:0, repeatBlocks:0, cardShortages:0, buildTimeouts:0,
+    rounds:[], errors:{syntax:0,runtime:0,missed:0,safety:0},
     buzz:{used:0,refunded:0,missed:0}, overrule:0, glitch:0, compilerCards:0, completed:0, timeout:0,
-    paramSteps:0, paramDistinct:0, paramReuse:0, paramPoolHands:0, paramStarvedHands:0, challenges:{}, openings:{},
+    challenges:{}, openings:{},
     time:{draft:0, read:0, execute:0, move:0, arm:0, stand:0, gap:0, buzz:0, freeze:0}
   };
 
-  const codingDeck = [];
-  (function fill(){
-    const inst = rng.shuffle(buildCardInstances(cfg)).map((c,i) => Object.assign({uid:"d"+i}, c));
-    codingDeck.push(...inst);
-  })();
-  const discard = [];
-  let uidCounter = 0;
-
-  function drawCard(){
-    if (codingDeck.length === 0){
-      const refill = rng.shuffle(discard.splice(0, discard.length));
-      codingDeck.push(...refill);
-    }
-    return codingDeck.pop() || null;
-  }
-  function dealHand(n){
-    const hand = [];
-    for (let i=0;i<n;i++){ const c = drawCard(); if (c){ c.uid = "h"+(uidCounter++); hand.push(c); analytics.draws[c.word]=(analytics.draws[c.word]||0)+1; } }
-    for (let i=0;i<2;i++){ const w = {uid:"w"+(uidCounter++), cat:"wild", word:"BLANK"}; hand.push(w); }
-    return hand;
-  }
   const usedChallenges = new Set();
   function chooseChallenge(){
     const weights = {easy: cfg.eco?4:3, medium:3, hard: cfg.eco?1:3, script:1};
@@ -490,11 +504,6 @@ function simulate(cfg){
     const c = rng.pick(pool);
     usedChallenges.add(c.id);
     return c;
-  }
-  function pickTemplate(challenge, hand){
-    const results = challenge.sigs.map(sig => Object.assign({sig}, analyzeHand(hand, sig, rng)));
-    const min = Math.min(...results.map(r => r.missing.length));
-    return rng.pick(results.filter(r => r.missing.length === min));
   }
 
   const readerOf = (prog) => { const p = PLAYERS[prog[0]], q = PLAYERS[prog[1]]; return p.read <= q.read ? p : q; };
@@ -522,39 +531,42 @@ function simulate(cfg){
     const challenge = chooseChallenge();
     analytics.challenges[challenge.id] = analytics.challenges[challenge.id] || {drawn:0, completed:0};
     analytics.challenges[challenge.id].drawn++;
-    const hand = dealHand(8);
-    analytics.hands++;
-    push("draw", `Challenge drawn (#${challenge.id}, ${challenge.diff}) and kept hidden from ${robotP.name}. Hand: ${hand.filter(c=>c.cat!=="wild").length} cards + 2 wildcards.`, {challenge, hand});
+    push("draw", `Challenge drawn (#${challenge.id}, ${challenge.diff}) and kept hidden from ${robotP.name}. Programmers take the full deck + 2 Jokers.`, {challenge});
 
-    const draftTime = (challenge.text.split(" ").length / (TIMING.READ_WPS * 2)) * reader.read
-      + rng.range(0.5, 1.5) + 8 * pickup(reader, rng) + searchTime(8, reader, rng);
-    analytics.time.draft += draftTime;
-    wait(draftTime);
-
-    const plan = pickTemplate(challenge, hand);
+    const buildCap = cfg.eco ? 120 : 90;
+    const plan = assembleProgram(challenge, cfg, rng, reader);
     const sig = plan.sig;
     analytics.openings[sig[0].a] = (analytics.openings[sig[0].a]||0)+1;
-    analytics.wildcardUses += plan.wilds;
-    plan.missing.forEach(m => { analytics.missingByWord[m.word] = (analytics.missingByWord[m.word]||0)+1; });
-    if (plan.missing.length > 0) analytics.unsolvable++;
-    const movementSteps = sig.filter(s => s.p).length;
-    const poolInHand = hand.filter(c => c.cat==="param").length;
-    analytics.paramSteps += movementSteps;
-    analytics.paramDistinct += plan.paramsUsed;
-    analytics.paramReuse += Math.max(0, movementSteps - plan.paramsUsed);
-    if (poolInHand > 0) analytics.paramPoolHands++;
-    if (poolInHand === 0 && movementSteps > 0) analytics.paramStarvedHands++;
-    plan.stack.forEach(e => {
-      if (e.actionCard && !e.actionWild) analytics.plays[e.actionCard.word] = (analytics.plays[e.actionCard.word]||0)+1;
-      if (e.actionWild) analytics.plays["BLANK"] = (analytics.plays["BLANK"]||0)+1;
-      if (e.paramCard && !e.paramWild) analytics.plays[e.paramCard.word] = (analytics.plays[e.paramCard.word]||0)+1;
-      if (e.paramWild) analytics.plays["BLANK"] = (analytics.plays["BLANK"]||0)+1;
+    analytics.jokersUsed += plan.jokers;
+    analytics.targetsUsed += plan.targets;
+    analytics.sensorsUsed += plan.sensors;
+    analytics.cardShortages += plan.shortage;
+    analytics.repeatBlocks += plan.roots.filter(n => n.kind === "repeat").length;
+    walkNodes(plan.roots, nd => {
+      if (nd.kind === "if" && nd.sensor){ analytics.plays[nd.sensor] = (analytics.plays[nd.sensor]||0)+1; return; }
+      if (nd.kind !== "cmd") return;
+      analytics.plays[nd.step.a] = (analytics.plays[nd.step.a]||0)+1;
+      if (nd.paramWord) analytics.plays[nd.paramWord] = (analytics.plays[nd.paramWord]||0)+1;
+      if (nd.target) analytics.plays[nd.target] = (analytics.plays[nd.target]||0)+1;
     });
 
-    const buildTime = plan.stack.length * (searchTime(plan.stack.length / 2, reader, rng) + pickup(reader, rng) + deliberate(reader, rng));
-    analytics.time.draft += buildTime;
-    wait(buildTime);
-    push("plan", `Stack built with ${plan.stack.length} command slots${plan.missing.length?` — ${plan.missing.length} requirement(s) uncovered`:""}. Wildcards used: ${plan.wilds}.`, {challenge, hand, stack:plan.stack, missing:plan.missing, sig});
+    const assemblyTime = plan.assemblyTime;
+    const spent = Math.min(assemblyTime, buildCap);
+    analytics.time.draft += spent;
+    wait(spent);
+    const buildTimeout = assemblyTime > buildCap;
+    if (buildTimeout) analytics.buildTimeouts++;
+    const buildLeft = Math.max(0, buildCap - assemblyTime);
+
+    let cmds = expandProgram(plan.roots, rng);
+    let truncated = plan.shortage > 0;
+    if (buildTimeout){
+      const keep = Math.max(1, Math.floor(cmds.length * (buildCap / assemblyTime)));
+      if (keep < cmds.length) truncated = true;
+      cmds = cmds.slice(0, keep);
+    }
+    const repeatCount = plan.roots.filter(n => n.kind === "repeat").length;
+    push("plan", `Program assembled: ${cmds.length} command(s) in ${assemblyTime.toFixed(0)}s of ${buildCap}s${repeatCount?` · ${repeatCount} REPEAT block(s)`:""}${plan.jokers?` · ${plan.jokers} Joker(s)`:""}${plan.targets?` · ${plan.targets} Target(s)`:""}.${truncated?" Build timer expired — forced RUN with an incomplete program.":""}`, {challenge, stack:cmds, sig, buildCap, buildLeft, truncated});
 
     let status = {glitch:null, cmdsLeft:0};
     if (rng.chance(0.5)){
@@ -576,12 +588,12 @@ function simulate(cfg){
     }
 
     props.timerRunning = true;
-    timerCap = cfg.eco ? 120 : 90;
+    timerCap = cfg.eco ? 90 : 60;
     remaining = timerCap;
     const timerStart = remaining;
-    push("run", `${reader.name} says "RUN." Timer starts at ${remaining}s.`, {challenge});
+    push("run", `${reader.name} says "RUN." Execute timer starts at ${remaining}s.`, {challenge});
 
-    const quality = plan.stack.length ? 1 - plan.missing.length / plan.stack.length : 1;
+    const quality = truncated ? 0.85 : 1;
     const elapsedFrac = () => (timerStart - remaining) / timerStart;
 
     function buzzRoll(issue, idx, progTeamLocal, compLocal){
@@ -610,14 +622,15 @@ function simulate(cfg){
       }
     }
 
-    let complete = true;
+    let complete = !truncated;
     curRound = round;
-    for (let i=0;i<plan.stack.length;i++){
+    for (let i=0;i<cmds.length;i++){
       if (remaining <= 0){ break; }
-      const entry = plan.stack[i];
-      const actionWord = entry.missingAction || (entry.actionCard ? (entry.actionWild ? "BLANK(→"+entry.step.a+")" : entry.actionCard.word) : entry.step.a);
-      const paramWord = entry.paramCard ? (entry.paramWild ? "BLANK(→param)" : entry.paramCard.word) : null;
-      const cmd = paramWord ? `${actionWord} ${paramWord}` : actionWord;
+      const item = cmds[i];
+      const actionWord = item.a;
+      const paramWord = item.paramWord;
+      const targetWord = item.target;
+      const cmd = [actionWord, paramWord, targetWord].filter(Boolean).join(" ");
 
       let skipCmd = false, mult = 1, addT = 0;
       if (status.glitch && status.cmdsLeft > 0){
@@ -628,16 +641,7 @@ function simulate(cfg){
         status.cmdsLeft--;
       }
 
-      if (entry.missingAction){
-        push("error-syntax", `Step ${i+1}: no ${entry.step.a} card can be played — ${reader.name} improvises outside the deck.`, {stackIndex:i});
-        const issue = {type:"syntax", msg:`a required ${entry.step.a} command is missing from the stack`};
-        buzzRoll(issue, i, progTeam, compTeam);
-        wait(1.6*mult + addT);
-        complete = false;
-        continue;
-      }
-
-      const risky = ["MOVE","ROTATE","SPIN"].includes(entry.step.a);
+      const risky = ["MOVE","ROTATE","SPIN"].includes(actionWord);
       if (risky && rng.chance(0.04)){
         analytics.errors.safety++;
         push("safety", `${robotP.name}: "WILL CAUSE INJURY." Command refused under the Safety Override — free, command replaced.`, {stackIndex:i});
@@ -645,8 +649,8 @@ function simulate(cfg){
         continue;
       }
 
-      const options = (plan.stack.length - i) + 2;
-      const words = actionWord.split(" ").length + (paramWord?2:0);
+      const options = (cmds.length - i) + 2;
+      const words = actionWord.split(" ").length + (paramWord?2:0) + (targetWord?2:0);
       const readTime = (searchTime(i, reader, rng) + perceive(reader, options, rng) + speakTime(words, reader) + deliberate(reader, rng)) * mult + addT;
       analytics.time.read += readTime;
       push("read", `${reader.name} reads "${cmd}" verbatim.`, {stackIndex:i, card:actionWord, posture});
@@ -659,12 +663,7 @@ function simulate(cfg){
         continue;
       }
 
-      if (entry.missingParam){
-        push("error-syntax", `${actionWord} read with no ${entry.missingParam} parameter.`, {stackIndex:i});
-        buzzRoll({type:"syntax", msg:`${actionWord} is missing its ${entry.missingParam} parameter`}, i, progTeam, compTeam);
-        complete = false;
-        wait(0.8);
-      } else if (rng.chance(Math.min(0.22, 0.02 + 0.07*(1-quality) + 0.04*elapsedFrac()))){
+      if (rng.chance(Math.min(0.22, 0.02 + 0.07*(1-quality) + 0.04*elapsedFrac()))){
         push("error-syntax", `${reader.name} slips into plain English — not a word printed on any card.`, {stackIndex:i});
         buzzRoll({type:"syntax", msg:`"${reader.name} used plain English instead of a card word"`}, i, progTeam, compTeam);
       } else if (rng.chance(0.03 + 0.05*(1-quality))){
@@ -672,23 +671,23 @@ function simulate(cfg){
         buzzRoll({type:"syntax", msg:"the card sequence is read out of order"}, i, progTeam, compTeam);
       }
 
-      if (STAND_ACTIONS.has(entry.step.a) && posture === "seated"){
+      if (STAND_ACTIONS.has(actionWord) && posture === "seated"){
         const standTime = TIMING.STAND * robotP.mobility * rng.jit(0.10);
         analytics.time.stand += standTime;
         push("posture", `${robotP.name} stands up.`, {stackIndex:i, posture:"standing"});
         wait(standTime);
         posture = "standing";
       }
-      const at = actionTime(entry.step.a, entry.paramCard ? entry.paramCard.word : null, entry.step, robotP, rng);
+      const at = actionTime(actionWord, paramWord, item, robotP, rng);
       const exec = at.t * mult + addT;
       analytics.time.execute += exec;
       analytics.time[at.kind] += exec;
-      push("execute", `${robotP.name} executes ${entry.step.a}${paramWord?" "+paramWord:""}.`, {stackIndex:i, card:actionWord, posture});
+      push("execute", `${robotP.name} executes ${cmd}.`, {stackIndex:i, card:actionWord, posture});
       wait(exec);
 
       if (rng.chance(0.015*(1-quality)+0.01)){
-        push("error-runtime", `Runtime error during ${entry.step.a}: the Robot hits an obstacle (OutOfBounds).`, {stackIndex:i});
-        buzzRoll({type:"runtime", msg:`the Robot hit an obstacle during ${entry.step.a} (OutOfBounds)`}, i, progTeam, compTeam);
+        push("error-runtime", `Runtime error during ${actionWord}: the Robot hits an obstacle (OutOfBounds).`, {stackIndex:i});
+        buzzRoll({type:"runtime", msg:`the Robot hit an obstacle during ${actionWord} (OutOfBounds)`}, i, progTeam, compTeam);
         complete = false;
         wait(0.6);
       }
@@ -708,7 +707,7 @@ function simulate(cfg){
     }
 
     let roundResult;
-    if (remaining > 0 && complete && plan.missing.length === 0){
+    if (remaining > 0 && complete){
       scores.team[progLabel] += 3;
       analytics.completed++;
       analytics.challenges[challenge.id].completed++;
@@ -717,10 +716,10 @@ function simulate(cfg){
     } else if (remaining <= 0){
       analytics.timeout++;
       roundResult = {round, completed:false, used:timerStart, team:progLabel, reason:"timeout"};
-      push("timeout", `Timer expired. Challenge incomplete.`, {});
+      push("timeout", `Execute timer expired. Challenge incomplete.`, {});
     } else {
-      roundResult = {round, completed:false, used:timerStart-remaining, team:progLabel, reason:"unsatisfiable"};
-      push("timeout", `Programmers call "STOP": the Challenge cannot be satisfied by this hand.`, {});
+      roundResult = {round, completed:false, used:timerStart-remaining, team:progLabel, reason:"incomplete"};
+      push("timeout", `Program incomplete — Programmers call "STOP".`, {});
     }
     analytics.rounds.push(roundResult);
 
@@ -751,48 +750,28 @@ function simulate(cfg){
 
   analytics.finalScores = JSON.parse(JSON.stringify(scores));
   analytics.winner = winner;
-  analytics.missingTotal = Object.values(analytics.missingByWord).reduce((a,b)=>a+b,0);
   return {events, analytics, challengeLog:null};
 }
 
 function buildDiagnostics(A){
   const out = [];
   const avgUsed = A.rounds.length ? A.rounds.reduce((s,r)=>s+r.used,0)/A.rounds.length : 0;
-  if (A.missingTotal > 0){
-    const top = Object.entries(A.missingByWord).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([w,n])=>`${w} (${n})`).join(", ");
-    out.push(`<b>Constraints:</b> ${A.missingTotal} required card(s) were absent from hands. Most-missing: ${top}. Consider adding copies of those cards or shifting Challenge requirements.`);
-  }
-  if (A.unsolvable > 0){
-    out.push(`<b>Solvability:</b> ${A.unsolvable} of ${A.hands} hands (${Math.round(100*A.unsolvable/A.hands)}%) could not meet the Challenge even using both wildcards.`);
-  }
-  const never = Object.keys(A.deck).filter(w => !A.draws[w]);
-  if (never.length){
-    out.push(`<b>Dead draws:</b> ${never.length} card type(s) never drawn this session: ${never.join(", ")}. Small sample — confirm across seeds before cutting cards.`);
-  }
-  const drawnNotPlayed = Object.keys(A.draws).filter(w => w!=="BLANK" && A.draws[w]>0 && !(A.plays[w]>0));
-  if (drawnNotPlayed.length){
-    out.push(`<b>Draw-vs-play gap:</b> drawn but never played: ${drawnNotPlayed.join(", ")}. These may be filler or situational dead weight.`);
-  }
-  if (A.wildcardUses > 0){
-    out.push(`<b>Wildcards:</b> used ${A.wildcardUses} time(s). High reliance signals the base deck cannot cover Challenge requirements alone.`);
-  }
-  if (A.paramSteps > 0){
-    const coverage = A.hands ? Math.round(100*A.paramPoolHands/A.hands) : 0;
-    out.push(`<b>Pairing:</b> ${A.paramSteps} movement step(s) demanded a Parameter; hands held one ${coverage}% of the time. Reuse covered ${A.paramReuse} step(s) beyond the first distinct Parameter. ${A.paramStarvedHands>0 ? `${A.paramStarvedHands} hand(s) had no Parameter at all — now a Syntax Error.` : `No hand was ever Parameter-starved.`}`);
-  }
+  out.push(`<b>Assembly:</b> ${A.rounds.length} round(s) built; ${A.buildTimeouts} hit the build timer; ${A.cardShortages} card shortage(s); ${A.jokersUsed} Joker(s), ${A.targetsUsed} Target(s), ${A.repeatBlocks} REPEAT block(s) used.`);
+  const unused = Object.keys(A.deck).filter(w => !(A.plays[w] > 0));
+  if (unused.length) out.push(`<b>Never played:</b> ${unused.join(", ")}. With the full deck, these are unused rather than undrawable — consider whether they earn their place.`);
   if (A.openings){
     const ops = Object.entries(A.openings).sort((a,b)=>b[1]-a[1]);
     const total = ops.reduce((s,e)=>s+e[1],0);
     if (total) out.push(`<b>Openings:</b> ${ops.map(([k,v])=>`${k} ${Math.round(100*v/total)}%`).join(" · ")}.`);
   }
-  if (avgUsed > 75) out.push(`<b>Time pressure:</b> rounds consume ~${avgUsed.toFixed(0)}s of the 90s budget on average. Consider +15–30s or easier Challenges.`);
-  else if (avgUsed > 0 && avgUsed < 35) out.push(`<b>Under-tension:</b> rounds finish in ~${avgUsed.toFixed(0)}s — the timer rarely bites. Consider harder Challenges or a shorter clock.`);
-  if (A.buzz.used === 0) out.push(`<b>Compiler idle:</b> no valid buzzes all session. Either hand quality is too high or Compiler incentives/penalties need tuning.`);
+  if (avgUsed > 50) out.push(`<b>Time pressure:</b> rounds consume ~${avgUsed.toFixed(0)}s of the 60s execute budget. Consider a longer limit or shorter programs.`);
+  else if (avgUsed > 0 && avgUsed < 20) out.push(`<b>Under-tension:</b> rounds execute in ~${avgUsed.toFixed(0)}s — the execute timer rarely bites.`);
+  if (A.buzz.used === 0) out.push(`<b>Compiler idle:</b> no valid buzzes all session.`);
   if (A.buzz.missed > 0) out.push(`<b>Missed errors:</b> ${A.buzz.missed} real error(s) went unchallenged (reaction/reach limits).`);
-  if (A.glitch === 0) out.push(`<b>Glitch deck idle:</b> no Glitch cards entered play. BUG INJECTION frequency may be too low to matter.`);
+  if (A.glitch === 0) out.push(`<b>Glitch deck idle:</b> no Glitch cards entered play across the session.`);
   if (A.compilerCards === 0) out.push(`<b>Compiler cards idle:</b> none of the 5 Compiler cards were used.`);
-  if (A.time) out.push(`<b>Timing mix:</b> draft ${A.time.draft.toFixed(0)}s · read ${A.time.read.toFixed(0)}s · execute ${A.time.execute.toFixed(0)}s (move ${A.time.move.toFixed(0)}s) · stand/sit ${A.time.stand.toFixed(0)}s · handoff ${A.time.gap.toFixed(0)}s · buzz ${A.time.buzz.toFixed(0)}s · freeze ${A.time.freeze.toFixed(0)}s (whole session).`);
-  if (!out.length) out.push(`No balance flags raised this session. Run more seeds to confirm stability.`);
+  if (A.time) out.push(`<b>Timing mix:</b> assemble ${A.time.draft.toFixed(0)}s · read ${A.time.read.toFixed(0)}s · execute ${A.time.execute.toFixed(0)}s (move ${A.time.move.toFixed(0)}s) · stand/sit ${A.time.stand.toFixed(0)}s · handoff ${A.time.gap.toFixed(0)}s · buzz ${A.time.buzz.toFixed(0)}s · freeze ${A.time.freeze.toFixed(0)}s.`);
+  if (!out.length) out.push(`No flags raised this session. Run more seeds to confirm stability.`);
   return out;
 }
 
@@ -860,27 +839,34 @@ function chipHTML(cat, word, opts){
   const c = cat || "wild";
   const cls = ["chip", c, opts&&opts.cls].filter(Boolean).join(" ");
   const label = (c==="wild" ? "BLANK" : word);
-  const sub = c==="wild" ? "wildcard" : c;
+  const sub = c==="wild" ? "joker" : c;
   return `<span class="${cls}" data-uid="${opts&&opts.uid||""}">${label}<small>${sub}</small></span>`;
 }
 
-function renderHand(hand){
-  const el = $("#hand"); el.innerHTML = "";
-  if (!hand) return;
-  $("#handlbl").textContent = `${hand.length} cards (incl. 2 wild)`;
-  hand.forEach(c => el.insertAdjacentHTML("beforeend", chipHTML(c.cat, c.word, {uid:c.uid})));
+function renderDeck(){
+  const el = $("#hand"); if (!el) return;
+  el.innerHTML = "";
+  if ($("#handlbl")) $("#handlbl").textContent = "full deck · no hand dealt";
+  const counts = {};
+  DECK_SPEC.forEach(([c,w,n]) => { counts[c] = (counts[c]||0) + n; });
+  if ($("#adv") && $("#adv").checked) ADV_SPEC.forEach(([c,w,n]) => { counts[c] = (counts[c]||0) + n; });
+  ["action","param","target","sensor","advanced"].forEach(c => {
+    if (!counts[c]) return;
+    el.insertAdjacentHTML("beforeend", `<span class="chip ${c}">${c.toUpperCase()}<small>${counts[c]} cards</small></span>`);
+  });
+  el.insertAdjacentHTML("beforeend", `<span class="chip wild">JOKER<small>2 cards</small></span>`);
 }
 
 function renderStack(stack, curIdx, doneThrough){
   const el = $("#stack"); el.innerHTML = "";
   if (!stack) return;
-  stack.forEach((entry, i) => {
-    const word = entry.missingAction ? "???" : (entry.actionWild ? "BLANK" : entry.actionCard.word);
-    const cat = entry.missingAction ? "errcard" : (entry.actionWild ? "wild" : entry.actionCard.cat);
+  stack.forEach((c, i) => {
     const cls = [ (i===curIdx?"cur":""), (doneThrough!==undefined && i<=doneThrough?"done":"") ].filter(Boolean).join(" ");
-    let html = chipHTML(cat, word, {cls});
-    if (entry.paramCard) html += chipHTML(entry.paramWild?"wild":entry.paramCard.cat, entry.paramCard.word, {cls});
-    else if (entry.missingParam) html += `<span class="chip errcard">no ${entry.missingParam}<small>missing</small></span>`;
+    let html = "";
+    if (c.repeated) html += `<span class="chip wild">↻</span>`;
+    html += chipHTML("action", c.a, {cls});
+    if (c.paramWord) html += chipHTML("param", c.paramWord, {cls});
+    if (c.target) html += chipHTML("target", c.target, {cls});
     el.insertAdjacentHTML("beforeend", html);
   });
 }
@@ -909,11 +895,11 @@ function applyEvent(ev){
       renderStack(null);
       break;
     case "draw":
-      ui.challenge = ev.challenge; ui.hand = ev.hand;
+      ui.challenge = ev.challenge;
       $("#chaltext").textContent = ev.challenge.text;
       $("#difftag").textContent = ev.challenge.diff.toUpperCase() + (ev.challenge.script?" · SCRIPT":"");
-      $("#chalsig").textContent = `Goal + hand hidden from ${PLAYERS[cfg.robot].name} · ${ev.challenge.sigs.length} valid order(s)`;
-      renderHand(ev.hand);
+      $("#chalsig").textContent = `Goal hidden from ${PLAYERS[cfg.robot].name} · ${ev.challenge.sigs.length} valid program(s)`;
+      renderDeck();
       renderStack(null);
       setRobotState(PLAYERS[cfg.robot].name, "oblivious to the Challenge");
       renderTimer(null);
@@ -921,7 +907,7 @@ function applyEvent(ev){
     case "plan":
       ui.stack = ev.stack;
       renderStack(ev.stack, -1);
-      if (ev.sig) $("#chalsig").textContent = `Chosen order: ${ev.sig.map(s=>s.a+(s.p?"("+s.p+")":"")).join(" → ")} (1 of ${ev.challenge.sigs.length})`;
+      if (ev.sig) $("#chalsig").textContent = `Chosen order: ${ev.sig.map(s=>s.a+(s.p?"("+s.p+")":"")).join(" → ")} (1 of ${ev.challenge.sigs.length}) · built in ${(ev.buildCap-ev.buildLeft).toFixed(0)}/${ev.buildCap}s`;
       break;
     case "run":
       $("#roundlbl").textContent = "Round " + ev.round + " · RUN";
@@ -1022,7 +1008,7 @@ function startSim(){
   ui.tape = sim.events;
   ui.analytics = sim.analytics;
   ui.idx = 0; ui.T = 0; ui.running = false; ui.revealed = new Set();
-  ui.lastRoles = null; ui.challenge = null; ui.hand = null; ui.stack = null;
+  ui.lastRoles = null; ui.challenge = null; ui.stack = null;
   $("#log").innerHTML = "";
   $("#exportbtns").style.display = "none";
   renderPlayers(null);
@@ -1050,21 +1036,19 @@ function renderAnalytics(){
   const body = $("#analyticsbody");
   const diag = buildDiagnostics(A).map(d => `<div class="diag">${d}</div>`).join("");
   const roundRows = A.rounds.map(r => `<tr><td>R${r.round}</td><td>${r.completed?"✅ complete":"⛔ "+(r.reason||"fail")}</td><td class="n">${fmt(r.used,0)}s</td><td>Team ${r.team}</td></tr>`).join("");
-  const drawn = Object.entries(A.draws).sort((a,b)=>b[1]-a[1]);
-  const maxD = drawn.length ? drawn[0][1] : 1;
-  const cardRows = Object.keys(A.deck).map(w => {
-    const d = A.draws[w]||0, p = A.plays[w]||0, total = A.deck[w];
-    return `<tr><td>${w}</td><td class="n">${total}</td><td class="n">${d}</td><td class="n">${p}</td><td><span class="bar" style="width:${Math.round(60*d/maxD)}px"></span></td></tr>`;
-  }).join("");
+  const played = Object.keys(A.deck).map(w => ({w, p:A.plays[w]||0})).sort((a,b)=>b.p-a.p);
+  const maxP = played.length ? Math.max(1, played[0].p) : 1;
+  const cardRows = played.map(({w,p}) =>
+    `<tr><td>${w}</td><td class="n">${A.deck[w]}</td><td class="n">${p}</td><td><span class="bar" style="width:${Math.round(60*p/maxP)}px"></span></td></tr>`).join("");
   body.innerHTML = `
     <div style="margin-bottom:8px">
-      <span class="pill">${A.hands} hands</span>
       <span class="pill">${A.completed}/${A.rounds.length} completed</span>
-      <span class="pill">${A.timeout} timeout</span>
+      <span class="pill">${A.buildTimeouts} build timeouts</span>
+      <span class="pill">${A.timeout} execute timeouts</span>
+      <span class="pill">${A.jokersUsed} jokers</span>
+      <span class="pill">${A.repeatBlocks} REPEAT</span>
       <span class="pill">${A.buzz.used} buzzes</span>
       <span class="pill">${A.overrule} overrules</span>
-      <span class="pill">${A.wildcardUses} wild uses</span>
-      <span class="pill">${A.missingTotal} missing reqs</span>
     </div>
     ${diag}
     <table>
@@ -1072,16 +1056,16 @@ function renderAnalytics(){
       ${roundRows}
     </table>
     <table style="margin-top:8px">
-      <tr><th>Card</th><th class="n">Deck</th><th class="n">Drawn</th><th class="n">Played</th><th>Draw freq</th></tr>
+      <tr><th>Card</th><th class="n">Deck</th><th class="n">Played</th><th>Use</th></tr>
       ${cardRows}
     </table>
     <div class="muted" style="margin-top:8px;font-size:11px">
       Errors — syntax ${A.errors.syntax}, runtime ${A.errors.runtime}, missed ${A.errors.missed}, safety refusals ${A.errors.safety}.
-      Glitch cards played ${A.glitch}; Compiler cards used ${A.compilerCards}; buzz tokens wasted on overrule ${A.buzz.refunded}.
+      Targets ${A.targetsUsed}; Sensors ${A.sensorsUsed}; card shortages ${A.cardShortages}; Compiler cards used ${A.compilerCards}.
     </div>`;
 }
 
-const SIM_VERSION = "0.5.0";
+const SIM_VERSION = "0.6.0";
 
 function logLines(){
   return (ui.tape || []).map(ev => {
@@ -1106,21 +1090,21 @@ function exportLog(){
   const header = [
     `iRobot Session Simulator v${SIM_VERSION}`,
     `seed=${$("#seed").value}  eco=${$("#eco").checked}  adv=${$("#adv").checked}  robot=quentin`,
-    `events=${ui.tape.length}  hands=${A?A.hands:""}  completed=${A?A.completed:""}  winner=${A?A.winner:""}`,
+    `events=${ui.tape.length}  completed=${A?A.completed:""}  buildTimeouts=${A?A.buildTimeouts:""}  winner=${A?A.winner:""}`,
     "----------------------------------------------------------------"
   ].join("\n");
   download(`irobot-log-${$("#seed").value}.txt`, header + "\n" + logLines().join("\n") + "\n");
 }
 function exportCSV(){
   const A = ui.analytics; if (!A) return;
-  const lines = ["card,deck_count,drawn,played"];
-  Object.keys(A.deck).forEach(w => lines.push([JSON.stringify(w), A.deck[w], A.draws[w]||0, A.plays[w]||0].join(",")));
+  const lines = ["card,deck_count,played"];
+  Object.keys(A.deck).forEach(w => lines.push([JSON.stringify(w), A.deck[w], A.plays[w]||0].join(",")));
   lines.push("");
   lines.push("round,result,seconds_used,team");
   A.rounds.forEach(r => lines.push([r.round, r.completed?"complete":(r.reason||"fail"), fmt(r.used,1), r.team].join(",")));
   lines.push("");
   lines.push("metric,value");
-  ["hands","unsolvable","wildcardUses","completed","timeout"].forEach(k => lines.push(`${k},${A[k]}`));
+  ["completed","timeout","buildTimeouts","cardShortages","jokersUsed","targetsUsed","repeatBlocks"].forEach(k => lines.push(`${k},${A[k]}`));
   ["syntax","runtime","missed","safety"].forEach(k => lines.push(`error_${k},${A.errors[k]}`));
   download(`irobot-sim-${$("#seed").value}.csv`, lines.join("\n"));
 }
@@ -1134,20 +1118,22 @@ function download(name, text){
 
 function aggregateRuns(runs){
   const A = {
-    sessions: runs.length, rounds:0, completed:0, timeouts:0,
+    sessions: runs.length, rounds:0, completed:0, timeouts:0, buildTimeouts:0,
+    cardShortages:0, jokersUsed:0, targetsUsed:0, sensorsUsed:0, repeatBlocks:0,
     winners:{A:0,B:0,tie:0}, tokens:{A:0,B:0}, marginSum:0,
     usedSum:0, usedCount:0,
     errors:{syntax:0,runtime:0,missed:0,safety:0},
     buzz:{used:0,refunded:0,missed:0}, overrule:0,
-    glitch:0, compilerCards:0, wildcardUses:0, unsolvable:0, hands:0,
-    missingTotal:0, missingByWord:{},
-    paramSteps:0, paramDistinct:0, paramReuse:0, paramPoolHands:0, paramStarvedHands:0,
+    glitch:0, compilerCards:0,
     cards:{}, challenges:{}, openings:{},
     time:{draft:0, read:0, execute:0, move:0, arm:0, stand:0, gap:0, buzz:0, freeze:0}
   };
   runs.forEach(r => {
     const a = r.analytics;
     A.rounds += a.rounds.length; A.completed += a.completed; A.timeouts += a.timeout;
+    A.buildTimeouts += a.buildTimeouts||0; A.cardShortages += a.cardShortages||0;
+    A.jokersUsed += a.jokersUsed||0; A.targetsUsed += a.targetsUsed||0;
+    A.sensorsUsed += a.sensorsUsed||0; A.repeatBlocks += a.repeatBlocks||0;
     if (A.winners[a.winner] !== undefined) A.winners[a.winner]++;
     A.tokens.A += a.finalScores.team.A; A.tokens.B += a.finalScores.team.B;
     A.marginSum += Math.abs(a.finalScores.team.A - a.finalScores.team.B);
@@ -1155,17 +1141,12 @@ function aggregateRuns(runs){
     ["syntax","runtime","missed","safety"].forEach(k => { A.errors[k] += a.errors[k]||0; });
     ["used","refunded","missed"].forEach(k => { A.buzz[k] += a.buzz[k]||0; });
     A.overrule += a.overrule; A.glitch += a.glitch; A.compilerCards += a.compilerCards;
-    A.wildcardUses += a.wildcardUses; A.unsolvable += a.unsolvable; A.hands += a.hands;
-    A.missingTotal += a.missingTotal;
-    A.paramSteps += a.paramSteps; A.paramDistinct += a.paramDistinct; A.paramReuse += a.paramReuse;
-    A.paramPoolHands += a.paramPoolHands; A.paramStarvedHands += a.paramStarvedHands;
     Object.keys(a.deck).forEach(w => {
-      const c = A.cards[w] || (A.cards[w] = {deck:a.deck[w], drawn:0, played:0});
-      c.drawn += a.draws[w]||0; c.played += a.plays[w]||0;
+      const c = A.cards[w] || (A.cards[w] = {deck:a.deck[w], played:0});
+      c.played += a.plays[w]||0;
     });
     if (a.time) Object.keys(A.time).forEach(k => { A.time[k] += a.time[k]||0; });
     Object.keys(a.openings||{}).forEach(k => { A.openings[k] = (A.openings[k]||0) + a.openings[k]; });
-    Object.keys(a.missingByWord||{}).forEach(w => { A.missingByWord[w] = (A.missingByWord[w]||0) + a.missingByWord[w]; });
     Object.keys(a.challenges||{}).forEach(id => {
       const c = A.challenges[id] || (A.challenges[id] = {drawn:0, completed:0});
       c.drawn += a.challenges[id].drawn; c.completed += a.challenges[id].completed;
@@ -1176,31 +1157,24 @@ function aggregateRuns(runs){
   A.avgTokensB = A.sessions ? A.tokens.B/A.sessions : 0;
   A.avgMargin = A.sessions ? A.marginSum/A.sessions : 0;
   A.completionRate = A.rounds ? A.completed/A.rounds : 0;
-  A.neverDrawn = Object.keys(A.cards).filter(w => A.cards[w].drawn===0);
-  A.drawnNotPlayed = Object.keys(A.cards).filter(w => A.cards[w].drawn>0 && A.cards[w].played===0);
+  A.neverPlayed = Object.keys(A.cards).filter(w => A.cards[w].played===0);
   A.diagnostics = buildAggregateDiagnostics(A);
   return A;
 }
 
 function buildAggregateDiagnostics(A){
   const out = [];
-  out.push(`<b>Batch:</b> ${A.sessions} sessions · ${A.rounds} rounds · completion ${A.completed}/${A.rounds} (${Math.round(100*A.completionRate)}%) · ${A.timeouts} timeout(s).`);
+  out.push(`<b>Batch:</b> ${A.sessions} sessions · ${A.rounds} rounds · completion ${A.completed}/${A.rounds} (${Math.round(100*A.completionRate)}%) · ${A.buildTimeouts} build timeout(s) · ${A.timeouts} execute timeout(s).`);
   out.push(`<b>Wins:</b> Team A ${A.winners.A} · Team B ${A.winners.B} · ties ${A.winners.tie}. Avg tokens A ${A.avgTokensA.toFixed(1)}, B ${A.avgTokensB.toFixed(1)} · avg margin ${A.avgMargin.toFixed(1)}.`);
-  out.push(`<b>Time:</b> average round consumes ${A.avgUsed.toFixed(1)}s of the 90s budget.`);
-  if (A.missingTotal > 0){
-    const top = Object.entries(A.missingByWord).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([w,n])=>`${w} (${n})`).join(", ");
-    out.push(`<b>Constraints:</b> ${A.missingTotal} required card(s) absent across hands. Most-missing: ${top}.`);
-  }
-  if (A.unsolvable > 0) out.push(`<b>Solvability:</b> ${A.unsolvable}/${A.hands} hands (${Math.round(100*A.unsolvable/A.hands)}%) unsatisfiable even with both wildcards.`);
-  if (A.paramSteps > 0) out.push(`<b>Pairing:</b> ${A.paramSteps} movement steps · ${A.paramDistinct} distinct params · ${A.paramReuse} reused · ${A.paramStarvedHands} starved hand(s).`);
+  out.push(`<b>Time:</b> average round spends ${A.avgUsed.toFixed(1)}s executing of the 60s budget.`);
+  out.push(`<b>Assembly:</b> ${A.jokersUsed} Joker(s) · ${A.targetsUsed} Target(s) · ${A.repeatBlocks} REPEAT block(s) · ${A.cardShortages} card shortage(s).`);
   {
     const ops = Object.entries(A.openings).sort((a,b)=>b[1]-a[1]);
     const total = ops.reduce((s,e)=>s+e[1],0);
     if (total) out.push(`<b>Openings:</b> ${ops.map(([k,v])=>`${k} ${Math.round(100*v/total)}%`).join(" · ")}.`);
   }
-  out.push(`<b>Timing mix (all sessions):</b> draft ${A.time.draft.toFixed(0)}s · read ${A.time.read.toFixed(0)}s · execute ${A.time.execute.toFixed(0)}s (move ${A.time.move.toFixed(0)}s) · stand/sit ${A.time.stand.toFixed(0)}s · handoff ${A.time.gap.toFixed(0)}s · buzz ${A.time.buzz.toFixed(0)}s · freeze ${A.time.freeze.toFixed(0)}s.`);
-  if (A.neverDrawn.length) out.push(`<b>Never drawn:</b> ${A.neverDrawn.join(", ")}.`);
-  if (A.drawnNotPlayed.length) out.push(`<b>Drawn but never played:</b> ${A.drawnNotPlayed.join(", ")}.`);
+  out.push(`<b>Timing mix (all sessions):</b> assemble ${A.time.draft.toFixed(0)}s · read ${A.time.read.toFixed(0)}s · execute ${A.time.execute.toFixed(0)}s (move ${A.time.move.toFixed(0)}s) · stand/sit ${A.time.stand.toFixed(0)}s · handoff ${A.time.gap.toFixed(0)}s · buzz ${A.time.buzz.toFixed(0)}s · freeze ${A.time.freeze.toFixed(0)}s.`);
+  if (A.neverPlayed.length) out.push(`<b>Never played:</b> ${A.neverPlayed.join(", ")}. With the full deck, these are simply unused.`);
   out.push(`<b>Errors:</b> syntax ${A.errors.syntax} · runtime ${A.errors.runtime} · missed ${A.errors.missed} · safety ${A.errors.safety} · buzzes ${A.buzz.used} · overrules ${A.overrule}.`);
   if (A.glitch === 0) out.push(`<b>Glitch deck idle:</b> no Glitch cards entered play across the batch.`);
   if (A.buzz.used === 0) out.push(`<b>Compiler idle:</b> no valid buzzes across the batch.`);
@@ -1211,7 +1185,7 @@ function renderBatchReport(A, meta){
   const pills = `<span class="pill">${A.sessions} sessions</span><span class="pill">${A.completed}/${A.rounds} completed</span><span class="pill">${A.timeouts} timeouts</span><span class="pill">A ${A.winners.A} · B ${A.winners.B} · tie ${A.winners.tie}</span><span class="pill">avg ${A.avgUsed.toFixed(0)}s/round</span>`;
   const cardRows = Object.keys(A.cards).map(w => {
     const c = A.cards[w];
-    return `<tr><td>${w}</td><td class="n">${c.deck}</td><td class="n">${c.drawn}</td><td class="n">${c.played}</td></tr>`;
+    return `<tr><td>${w}</td><td class="n">${c.deck}</td><td class="n">${c.played}</td></tr>`;
   }).join("");
   const chRows = Object.keys(A.challenges).sort((a,b)=>Number(a)-Number(b)).map(id => {
     const c = A.challenges[id];
@@ -1226,7 +1200,7 @@ function renderBatchReport(A, meta){
       ${chRows}
     </table>
     <table style="margin-top:8px">
-      <tr><th>Card</th><th class="n">Deck</th><th class="n">Drawn</th><th class="n">Played</th></tr>
+      <tr><th>Card</th><th class="n">Deck</th><th class="n">Played</th></tr>
       ${cardRows}
     </table>
     <div class="muted" style="margin-top:8px;font-size:11px">base seed ${meta.baseSeed} · eco ${meta.eco} · advanced ${meta.adv}</div>`;

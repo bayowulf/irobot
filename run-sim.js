@@ -6,7 +6,7 @@ const path = require("path");
 
 const ROOT = __dirname;
 const HTML = path.join(ROOT, "simulator.html");
-const VERSION = "0.5.0";
+const VERSION = "0.6.0";
 
 function makeEl(){
   const el = {
@@ -129,8 +129,7 @@ function main(){
     if (opts.summary){
       const A = r.A;
       console.log(`\n=== ${seed} — winner: ${A.winner} | rounds complete: ${A.completed}/${A.rounds.length} | tokens A:${A.finalScores.team.A} B:${A.finalScores.team.B} ===`);
-      console.log(`  cards: ${A.hands} hands · ${A.unsolvable} unsolvable · ${A.wildcardUses} wildcard uses · ${A.missingTotal} missing reqs`);
-      console.log(`  pairing: ${A.paramSteps} movement steps · ${A.paramDistinct} distinct params · ${A.paramReuse} reused · ${A.paramStarvedHands} starved hands`);
+      console.log(`  assembly: ${A.buildTimeouts} build timeout(s) · ${A.cardShortages} card shortage(s) · ${A.jokersUsed} joker(s) · ${A.targetsUsed} target(s) · ${A.repeatBlocks} REPEAT block(s)`);
       console.log(`  errors: syntax ${A.errors.syntax} · runtime ${A.errors.runtime} · missed ${A.errors.missed} · buzzes ${A.buzz.used}`);
       r.diagnostics.forEach(d => console.log("   - " + d.replace(/<[^>]+>/g, "")));
     } else {
