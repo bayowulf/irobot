@@ -12,11 +12,20 @@
 
 **Share link:** https://github.com/bayowulf/irobot
 
+**▶ [Launch the Session Simulator](simulator.html)** · **[Read the Rulebook](https://github.com/bayowulf/irobot#-irobot-the-human-logic-party-game)**
+
 </div>
 
 > [!TIP]
 > **This page *is* the game.** Everything below is the complete rulebook — nothing to
 > install or download. Scroll down, print the cards in §12, grab a timer, and play.
+
+> [!NOTE]
+> **Balance testing:** open [`simulator.html`](simulator.html) to run seeded, simulated
+> sessions with five virtual players — Alice, Bob, Verity, Julius, and Quentin — complete
+> with modeled human reaction times, the timer, buzz/Overrule tokens, and the Glitch and
+> Compiler decks. Each run produces a **balance report** on card counts, dead draws, and
+> Challenge solvability to guide deck rebalancing.
 
 A print-and-play party game of literal logic, physical comedy, and programming panic for
 **5 players** — built for one 9-year-old + two parents + two grandparents.

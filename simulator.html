@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iRobot — Session Simulator &amp; Balance Lab</title>
+<style>
+  :root{
+    --bg:#0f1218; --panel:#171c26; --panel2:#1e2532; --line:#2b3444;
+    --ink:#e8edf5; --dim:#93a0b4; --accent:#5b8cff;
+    --action:#2f6fed; --param:#f08c00; --target:#2f9e44; --sensor:#e6b800;
+    --glitch:#e03131; --advanced:#7048e8; --compiler:#6c757d; --wild:#adb5bd;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--ink);font:14px/1.45 "Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  header{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between;
+    padding:10px 16px;background:linear-gradient(180deg,#1a2130,#131822);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+  .brand{font-size:16px;font-weight:700;letter-spacing:.2px}
+  .brand span{font-weight:400;color:var(--dim);font-size:13px;margin-left:6px}
+  .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .controls label{display:flex;gap:5px;align-items:center;color:var(--dim);font-size:12px}
+  input[type=text],select{background:#0c1017;border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:6px 8px;font:inherit;font-size:12px}
+  input[type=text]{width:150px}
+  button{background:#22304a;border:1px solid #33456b;color:var(--ink);border-radius:7px;padding:7px 12px;font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+  button:hover{background:#2b3c5d}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#06101f}
+  button.primary:hover{background:#7aa2ff}
+  button:disabled{opacity:.45;cursor:default}
+  main{display:grid;grid-template-columns:minmax(230px,1fr) minmax(360px,1.5fr) minmax(300px,1.15fr);gap:12px;padding:12px;align-items:start}
+  @media (max-width:1080px){main{grid-template-columns:1fr}}
+  .col{display:flex;flex-direction:column;gap:12px;min-width:0}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+  .card h3{margin:0 0 8px;font-size:12px;letter-spacing:.8px;text-transform:uppercase;color:var(--dim)}
+  .muted{color:var(--dim)}
+  .row{display:flex;justify-content:space-between;gap:8px;align-items:center}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#0c1017;border:1px solid var(--line)}
+  .role-robot{background:#3a2a5e;border-color:#7048e8;color:#d9c9ff}
+  .role-programmer{background:#123055;border-color:#2f6fed;color:#bcd6ff}
+  .role-compiler{background:#4a2612;border-color:#f08c00;color:#ffd9b0}
+  .player{display:flex;justify-content:space-between;align-items:center;padding:7px 8px;border-radius:9px;background:var(--panel2);margin-bottom:6px;border:1px solid transparent}
+  .player .nm{font-weight:700}
+  .player .sub{font-size:11px;color:var(--dim)}
+  .player.active{border-color:var(--accent);box-shadow:0 0 0 1px #5b8cff44 inset}
+  .props{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+  .prop{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:7px 8px}
+  .prop .k{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--dim)}
+  .prop .v{font-weight:700;font-size:15px}
+  .buzzer{text-align:center;padding:9px;border-radius:9px;border:1px solid #6b1f1f;background:#2a1111;color:#ffb3b3;font-weight:800;letter-spacing:1px}
+  .buzzer.lit{background:#e03131;color:#fff;border-color:#ff8787;animation:flash .5s ease-out}
+  @keyframes flash{0%{transform:scale(1.06)}100%{transform:scale(1)}}
+  .challenge{background:#101725;border:1px dashed #33456b;border-radius:10px;padding:10px}
+  .challenge .txt{font-weight:600;font-size:15px}
+  .challenge .sig{margin-top:6px;font-size:11px;color:var(--dim)}
+  .veil{filter:blur(6px);user-select:none}
+  .timerwrap{margin-top:10px}
+  .timerbar{height:16px;border-radius:8px;background:#0c1017;border:1px solid var(--line);overflow:hidden}
+  .timerfill{height:100%;width:100%;background:linear-gradient(90deg,#2f9e44,#e6b800);transition:width .12s linear}
+  .timerfill.low{background:linear-gradient(90deg,#e03131,#f08c00)}
+  .timerwrap .lbl{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);margin-bottom:4px}
+  .hand{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{border-radius:8px;padding:6px 9px;font-size:12px;font-weight:700;color:#fff;border:1px solid #ffffff22;position:relative}
+  .chip small{display:block;font-weight:500;font-size:9px;opacity:.75;text-transform:uppercase;letter-spacing:.5px}
+  .chip.action{background:var(--action)} .chip.param{background:var(--param)}
+  .chip.target{background:var(--target)} .chip.sensor{background:var(--sensor);color:#1a1400}
+  .chip.advanced{background:var(--advanced)} .chip.glitch{background:var(--glitch)}
+  .chip.compiler{background:var(--compiler)} .chip.wild{background:var(--wild);color:#111}
+  .chip.used{opacity:.35}
+  .stack{display:flex;flex-wrap:wrap;gap:6px;min-height:34px}
+  .stack .chip{cursor:default}
+  .stack .chip.cur{outline:2px solid #fff;box-shadow:0 0 12px #fff7}
+  .stack .chip.done{opacity:.5}
+  .stack .chip.errcard{background:#000;border:1px dashed #ff6b6b;color:#ff9b9b}
+  .robotbox{margin-top:8px;background:#0c1017;border:1px solid var(--line);border-radius:9px;padding:9px;min-height:42px;font-weight:600}
+  .robotbox .who{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.6px;font-weight:700}
+  .log{height:300px;overflow:auto;background:#0c1017;border:1px solid var(--line);border-radius:9px;padding:8px;font-size:12px}
+  .log .ev{padding:3px 5px;border-left:3px solid var(--line);margin-bottom:3px;border-radius:0 5px 5px 0}
+  .log .ev .t{color:#5c6a80;font-size:10px;margin-right:6px}
+  .log .k-read{border-color:var(--action)} .log .k-execute{border-color:var(--target)}
+  .log .k-beep{border-color:#3f5a3f;color:#b6e3b6}
+  .log .k-error-syntax{border-color:var(--glitch);color:#ffb3b3}
+  .log .k-error-runtime{border-color:var(--glitch);color:#ffb3b3}
+  .log .k-buzz{border-color:var(--glitch);color:#ff8f8f;font-weight:700}
+  .log .k-overrule{border-color:var(--sensor);color:#ffe08a}
+  .log .k-glitch{border-color:var(--glitch);color:#ffc9c9}
+  .log .k-complete{border-color:var(--target);color:#b6f0c0;font-weight:700}
+  .log .k-timeout{border-color:var(--glitch);color:#ff9b9b;font-weight:700}
+  .log .k-safety{border-color:#e6b800;color:#ffe08a}
+  .log .k-round-end,.log .k-session-end{border-color:#7048e8;color:#d9c9ff;font-weight:700}
+  .log .k-roles,.log .k-draw,.log .k-plan,.log .k-run{border-color:#33456b}
+  .scoretbl{width:100%;border-collapse:collapse;font-size:12px}
+  .scoretbl td{padding:4px 5px;border-bottom:1px solid var(--line)}
+  .scoretbl td:last-child{text-align:right;font-weight:700}
+  .analytics .diag{padding:6px 8px;border-radius:8px;background:#101725;border:1px solid var(--line);margin-bottom:6px;font-size:12px}
+  .analytics table{width:100%;border-collapse:collapse;font-size:11px;margin-top:4px}
+  .analytics th,.analytics td{text-align:left;padding:3px 4px;border-bottom:1px solid #222a38}
+  .analytics td.n{text-align:right;font-variant-numeric:tabular-nums}
+  .bar{height:7px;border-radius:4px;background:var(--action);min-width:2px;display:inline-block;vertical-align:middle}
+  .flexbtns{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .tag{font-size:10px;padding:1px 6px;border-radius:999px;background:#0c1017;border:1px solid var(--line);color:var(--dim)}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">🤖 iRobot <span>Session Simulator &amp; Balance Lab</span></div>
+  <div class="controls">
+    <label>Seed <input type="text" id="seed" value="irobot-0001"></label>
+    <button id="rand">Randomize</button>
+    <button id="run" class="primary">Run</button>
+    <button id="step">Step</button>
+    <select id="speed">
+      <option value="1">1× real time</option>
+      <option value="2">2×</option>
+      <option value="5" selected>5×</option>
+      <option value="20">20×</option>
+      <option value="100">100×</option>
+      <option value="100000">Instant</option>
+    </select>
+    <label><input type="checkbox" id="eco"> Eco</label>
+    <label><input type="checkbox" id="adv"> Advanced</label>
+    <button id="reset">Reset</button>
+  </div>
+</header>
+
+<main>
+  <section class="col left">
+    <div class="card">
+      <h3>Players &amp; Roles</h3>
+      <div id="players"></div>
+      <div class="row" style="margin-top:6px"><span class="muted">Session</span><span id="sessionlbl" class="pill">ready</span></div>
+    </div>
+    <div class="card">
+      <h3>Props (physical components)</h3>
+      <div class="props">
+        <div class="prop"><div class="k">Timer</div><div class="v" id="p-timer">90.0s</div></div>
+        <div class="prop"><div class="k">Buzz tokens</div><div class="v" id="p-buzz">3</div></div>
+        <div class="prop"><div class="k">Overrule</div><div class="v" id="p-over">1</div></div>
+        <div class="prop"><div class="k">Glitch deck</div><div class="v" id="p-glitch">8</div></div>
+        <div class="prop"><div class="k">Compiler cards</div><div class="v" id="p-comp">5</div></div>
+        <div class="prop"><div class="k">Wildcards</div><div class="v" id="p-wild">2</div></div>
+      </div>
+      <div class="buzzer" id="buzzer" style="margin-top:8px">COMPILER BUZZER</div>
+      <div class="muted" style="margin-top:8px;font-size:11px">Table props: glass · ball · box · table · hat</div>
+    </div>
+  </section>
+
+  <section class="col center">
+    <div class="card">
+      <h3>Challenge <span class="tag" id="difftag">—</span></h3>
+      <div class="challenge">
+        <div class="txt" id="chaltext">Awaiting session start…</div>
+        <div class="sig" id="chalsig"></div>
+      </div>
+      <div class="timerwrap">
+        <div class="lbl"><span id="timerlbl">Timer — not running</span><span id="roundlbl"></span></div>
+        <div class="timerbar"><div class="timerfill" id="timerfill"></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Programmers' Hand <span class="tag" id="handlbl"></span></h3>
+      <div class="hand" id="hand"></div>
+      <h3 style="margin-top:12px">Built Stack</h3>
+      <div class="stack" id="stack"></div>
+      <div class="robotbox"><div class="who" id="robotwho">Robot</div><div id="robotstate">standing by</div></div>
+    </div>
+  </section>
+
+  <section class="col right">
+    <div class="card">
+      <h3>Team Scoreboard</h3>
+      <table class="scoretbl">
+        <tr><td>Team A — Alice &amp; Bob</td><td id="scoreA">0</td></tr>
+        <tr><td>Team B — Verity &amp; Julius</td><td id="scoreB">0</td></tr>
+      </table>
+      <h3 style="margin-top:10px">Personal (all night)</h3>
+      <table class="scoretbl" id="personal"></table>
+    </div>
+    <div class="card">
+      <h3>Event Log</h3>
+      <div class="log" id="log"></div>
+    </div>
+    <div class="card analytics" id="analytics">
+      <h3>Balance Report</h3>
+      <div class="muted" id="analyticsbody">Run a session to generate balance diagnostics.</div>
+      <div class="flexbtns" id="exportbtns" style="display:none">
+        <button id="expjson">Export JSON</button>
+        <button id="expcsv">Export CSV</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = (s) => document.querySelector(s);
+
+const CAT = {
+  action:"action", param:"param", target:"target", sensor:"sensor",
+  advanced:"advanced", glitch:"glitch", compiler:"compiler", wild:"wild"
+};
+
+const DECK_SPEC = [
+  ["action","MOVE",4],["action","ROTATE",3],["action","RAISE ARM",2],["action","LOWER ARM",2],
+  ["action","GRASP",3],["action","RELEASE",2],["action","POINT",1],["action","LOOK",1],
+  ["action","BEEP",1],["action","FREEZE",1],["action","SPIN",1],["action","BALANCE",1],
+  ["action","OPEN MOUTH",1],["action","CLOSE EYES",1],
+  ["param","1 STEP",3],["param","2 STEPS",2],["param","90 DEGREES",2],["param","180 DEGREES",1],
+  ["param","LEFT",3],["param","RIGHT",3],["param","FORWARD",1],["param","SPEED 50%",1],
+  ["target","OBJECT IN FRONT",2],["target","NEAREST SURFACE",2],["target","NEAREST HUMAN",2],
+  ["target","MY OTHER HAND",1],["target","THE GLASS",1],["target","THE BALL",1],["target","THE BOX",1],
+  ["sensor","DISTANCE < 6 INCHES",1],["sensor","TOUCH SENSOR = PRESSED",1],
+  ["sensor","HEAR SOUND = YES",1],["sensor","NO OBSTACLE",1]
+];
+
+const ADV_SPEC = [
+  ["advanced","REPEAT 3 TIMES",2],["advanced","REPEAT 2 TIMES",1],
+  ["advanced","WHILE [CONDITION]",1],["advanced","IF / THEN",1],["advanced","ELSE",1]
+];
+
+const GLITCH_DECK = [
+  "LOW BATTERY","SENSOR MALFUNCTION","WHEELS SLIP","LANGUAGE CORRUPTED",
+  "FIRMWARE UPDATE","DEJA VU","OVERHEAT","SOFTWARE UPDATE"
+];
+
+const COMPILER_CARDS = ["BUZZER","BUG INJECTION","BUG INJECTION","PATCH","ROLLBACK"];
+
+const GLITCH_EFFECT = {
+  "LOW BATTERY":{cmds:3,mult:1.8,txt:"Command timing ×1.8 for 3 commands."},
+  "SENSOR MALFUNCTION":{cmds:1,skip:true,txt:"Next command ignored."},
+  "WHEELS SLIP":{cmds:1,mult:1.5,txt:"Next direction executed in reverse."},
+  "LANGUAGE CORRUPTED":{cmds:4,add:0.3,txt:"Every sentence ends in “beep.”"},
+  "FIRMWARE UPDATE":{cmds:1,add:5,txt:"Robot freezes for 5 seconds."},
+  "DEJA VU":{cmds:1,add:1.6,txt:"Repeat last executed command."},
+  "OVERHEAT":{cmds:1,add:2,txt:"Fan yourself with both hands."},
+  "SOFTWARE UPDATE":{cmds:1,add:1.5,txt:"Hum until the next card."}
+};
+
+const PLAYERS = {
+  alice:  {id:"alice",  name:"Alice",  rel:"parent",     age:38, rt:1.00, read:1.00, acc:1.00, comedy:0.9, color:"#5b8cff"},
+  bob:    {id:"bob",    name:"Bob",    rel:"parent",     age:40, rt:0.95, read:0.98, acc:1.02, comedy:1.0, color:"#2f9e44"},
+  verity: {id:"verity", name:"Verity", rel:"grandmother",age:68, rt:1.30, read:1.15, acc:0.95, comedy:1.2, color:"#f08c00"},
+  julius: {id:"julius", name:"Julius", rel:"grandfather",age:72, rt:1.40, read:1.20, acc:0.92, comedy:1.1, color:"#7048e8"},
+  quentin:{id:"quentin",name:"Quentin",rel:"child",      age:9,  rt:1.25, read:1.35, acc:0.90, comedy:1.3, color:"#e64980"}
+};
+const ALL_IDS = ["alice","bob","verity","julius","quentin"];
+const TEAM_A = ["alice","bob"];
+const TEAM_B = ["verity","julius"];
+
+const ACTION_TIME = {
+  "MOVE":2.2,"ROTATE":1.6,"RAISE ARM":1.4,"LOWER ARM":1.4,"GRASP":1.6,"RELEASE":1.2,
+  "POINT":1.0,"LOOK":1.0,"BEEP":0.6,"FREEZE":1.0,"SPIN":2.2,"BALANCE":1.8,
+  "OPEN MOUTH":0.8,"CLOSE EYES":0.8
+};
+
+const CHALLENGES = [
+  {id:1,diff:"easy",text:"Pick up the ball and put it in the box.",sig:[{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}]},
+  {id:2,diff:"easy",text:"Point at the nearest human and beep.",sig:[{a:"POINT"},{a:"BEEP"}]},
+  {id:3,diff:"easy",text:"Pick up the cup and hand it to the person on your right.",sig:[{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}]},
+  {id:4,diff:"easy",text:"Raise both arms, then lower them.",sig:[{a:"RAISE ARM"},{a:"LOWER ARM"}]},
+  {id:5,diff:"medium",text:"Walk to the table, pick up the empty glass, and set it on the nearest surface.",sig:[{a:"MOVE",p:"dist"},{a:"GRASP"},{a:"RELEASE"}]},
+  {id:6,diff:"medium",text:"Put the ball on the table, then hand the cup to a human.",sig:[{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"},{a:"GRASP"},{a:"RELEASE"}]},
+  {id:7,diff:"medium",text:"Grasp the object in front, rotate 90 degrees, and release it into the box.",sig:[{a:"GRASP"},{a:"ROTATE",p:"angle"},{a:"RELEASE"}]},
+  {id:8,diff:"medium",text:"Touch the nearest human, then point at the nearest surface.",sig:[{a:"GRASP"},{a:"POINT"}]},
+  {id:9,diff:"hard",text:"Get the hat onto someone's head without touching them.",sig:[{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}]},
+  {id:10,diff:"hard",text:"Pick up the ball, spin 180 degrees, and place it on the nearest surface.",sig:[{a:"GRASP"},{a:"SPIN"},{a:"RELEASE"}]},
+  {id:11,diff:"hard",text:"Hand the cup to every human in the room, one at a time.",sig:[{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"},{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}]},
+  {id:12,diff:"hard",text:"Move to the table, grasp the glass, and return it to the robot's starting spot.",sig:[{a:"MOVE",p:"dist"},{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}]},
+  {id:13,diff:"script",script:true,text:"Pick up two objects and stack them.",sig:[{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"},{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}]},
+  {id:14,diff:"script",script:true,text:"Collect one object from each human and deposit them in the box.",sig:[{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"},{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"},{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}]},
+  {id:15,diff:"script",script:true,text:"Move, rotate, grasp, release, and beep — in exactly that order, twice.",sig:[{a:"MOVE",p:"dist"},{a:"ROTATE",p:"angle"},{a:"GRASP"},{a:"RELEASE"},{a:"BEEP"},{a:"MOVE",p:"dist"},{a:"ROTATE",p:"angle"},{a:"GRASP"},{a:"RELEASE"},{a:"BEEP"}]}
+];
+
+function hashSeed(str){
+  let h = 2166136261 >>> 0;
+  for (let i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h,16777619); }
+  return h >>> 0;
+}
+function makeRng(seedStr){
+  let a = hashSeed(String(seedStr)) || 1;
+  const next = () => {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+  const rng = {
+    next, int:(n)=>Math.floor(next()*n),
+    range:(lo,hi)=>lo+next()*(hi-lo),
+    chance:(p)=>next()<p,
+    pick:(arr)=>arr[Math.floor(next()*arr.length)],
+    jit:(sigma)=>{ const u=Math.max(next(),1e-9), v=next(); return Math.exp(Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)*(sigma||0.18)); },
+    shuffle:(arr)=>{ const a2=arr.slice(); for(let i=a2.length-1;i>0;i--){ const j=Math.floor(next()*(i+1)); const t=a2[i]; a2[i]=a2[j]; a2[j]=t; } return a2; }
+  };
+  return rng;
+}
+
+function paramType(w){
+  if (w==="1 STEP"||w==="2 STEPS") return "dist";
+  if (w==="90 DEGREES"||w==="180 DEGREES") return "angle";
+  if (w==="LEFT"||w==="RIGHT"||w==="FORWARD") return "dir";
+  return "other";
+}
+
+function reaction(base, player, rng){
+  return base * player.rt * rng.jit(0.16);
+}
+
+function buildCardInstances(cfg){
+  const defs = [];
+  const add = (cat,word,count) => { for(let i=0;i<count;i++) defs.push({cat,word}); };
+  DECK_SPEC.forEach(([c,w,n]) => { if (w==="OPEN MOUTH"||w==="CLOSE EYES"){ if(!cfg.eco || true) add(c,w,n); } else add(c,w,n); });
+  if (cfg.adv) ADV_SPEC.forEach(([c,w,n]) => add(c,w,n));
+  return defs;
+}
+
+function deckCounts(cfg){
+  const counts = {};
+  buildCardInstances(cfg).forEach(c => { counts[c.word] = (counts[c.word]||0)+1; });
+  return counts;
+}
+
+function analyzeHand(hand, sig, rng){
+  const used = new Set();
+  const stack = [];
+  const missing = [];
+  let wilds = 0;
+  const find = (pred) => { for (const c of hand){ if (!used.has(c.uid) && pred(c)) return c; } return null; };
+  const takeWild = () => { const w = find(c => c.cat==="wild"); if (w){ used.add(w.uid); wilds++; } return w; };
+
+  for (const step of sig){
+    const entry = {step, actionCard:null, actionWild:false, paramCard:null, paramWild:false, missingAction:null, missingParam:null};
+    let ac = find(c => c.cat==="action" && c.word===step.a);
+    if (ac) used.add(ac.uid);
+    else { ac = takeWild(); if (ac) entry.actionWild = true; }
+    entry.actionCard = ac;
+    if (!ac){ entry.missingAction = step.a; missing.push({word:step.a, type:"action"}); }
+    if (step.p){
+      let pc = find(c => c.cat==="param" && paramType(c.word)===step.p);
+      if (pc) used.add(pc.uid);
+      else { pc = takeWild(); if (pc) entry.paramWild = true; }
+      entry.paramCard = pc;
+      if (!pc){ entry.missingParam = step.p; missing.push({word:"param:"+step.p, type:"param"}); }
+    }
+    stack.push(entry);
+  }
+  const leftovers = hand.filter(c => !used.has(c.uid));
+  return {stack, missing, wilds, leftovers};
+}
+
+function simulate(cfg){
+  const rng = makeRng(cfg.seed);
+  const events = [];
+  let T = 0;
+  let curRound = 0;
+  let remaining = null;
+  let timerCap = 90;
+  const props = {buzzTokens:3, overrule:1, glitch:GLITCH_DECK.length, compilerCards:COMPILER_CARDS.length, wild:2, timerRunning:false, buzzer:false};
+  const scores = {team:{A:0,B:0}, personal:{}};
+  ALL_IDS.forEach(id => scores.personal[id] = {stars:0, comedy:0, robot:0});
+
+  const push = (kind, text, extra) => {
+    const ev = Object.assign({t:T, kind, text, round:curRound, remaining, timerCap}, extra||{});
+    ev.props = {buzzTokens:props.buzzTokens, overrule:props.overrule, glitch:props.glitch, compilerCards:props.compilerCards, wild:props.wild, timerRunning:props.timerRunning, buzzer:props.buzzer};
+    ev.scores = JSON.parse(JSON.stringify(scores));
+    events.push(ev);
+    props.buzzer = false;
+    return ev;
+  };
+  const wait = (d) => { T += Math.max(0.05, d); };
+
+  const analytics = {
+    deck: deckCounts(cfg), draws:{}, plays:{}, wildcardUses:0, hands:0, unsolvable:0,
+    missingByWord:{}, rounds:[], errors:{syntax:0,runtime:0,missed:0,safety:0},
+    buzz:{used:0,refunded:0,missed:0}, overrule:0, glitch:0, compilerCards:0, completed:0, timeout:0
+  };
+
+  const codingDeck = [];
+  (function fill(){
+    const inst = rng.shuffle(buildCardInstances(cfg)).map((c,i) => Object.assign({uid:"d"+i}, c));
+    codingDeck.push(...inst);
+  })();
+  const discard = [];
+  let uidCounter = 0;
+
+  function drawCard(){
+    if (codingDeck.length === 0){
+      const refill = rng.shuffle(discard.splice(0, discard.length));
+      codingDeck.push(...refill);
+    }
+    return codingDeck.pop() || null;
+  }
+  function dealHand(n){
+    const hand = [];
+    for (let i=0;i<n;i++){ const c = drawCard(); if (c){ c.uid = "h"+(uidCounter++); hand.push(c); analytics.draws[c.word]=(analytics.draws[c.word]||0)+1; } }
+    for (let i=0;i<2;i++){ const w = {uid:"w"+(uidCounter++), cat:"wild", word:"BLANK"}; hand.push(w); }
+    return hand;
+  }
+  function chooseChallenge(){
+    const weights = {easy: cfg.eco?4:3, medium:3, hard: cfg.eco?1:3, script:1};
+    const pool = [];
+    CHALLENGES.forEach(c => { const w = weights[c.diff]||1; for(let i=0;i<w;i++) pool.push(c); });
+    return rng.pick(pool);
+  }
+
+  const readerOf = (prog) => { const p = PLAYERS[prog[0]], q = PLAYERS[prog[1]]; return p.read <= q.read ? p : q; };
+  const robotP = PLAYERS[cfg.robot];
+
+  push("session-start", `Session begins. Robot: ${robotP.name}. Team A: Alice & Bob. Team B: Verity & Julius. Seed "${cfg.seed}".`, {});
+
+  for (let round=1; round<=4; round++){
+    curRound = round;
+    const progTeam = round%2===1 ? TEAM_A : TEAM_B;
+    const compTeam = round%2===1 ? TEAM_B : TEAM_A;
+    const progLabel = round%2===1 ? "A" : "B";
+    const reader = readerOf(progTeam);
+    const compBest = compTeam.map(id=>PLAYERS[id]).sort((a,b)=>b.acc-a.acc)[0];
+
+    props.buzzTokens = 3; props.overrule = 1;
+    const roles = {};
+    roles[cfg.robot] = "robot";
+    roles[progTeam[0]] = "programmer1"; roles[progTeam[1]] = "programmer2";
+    roles[compTeam[0]] = "compiler1"; roles[compTeam[1]] = "compiler2";
+
+    push("roles", `Round ${round}: Team ${progLabel} programs (${progTeam.map(i=>PLAYERS[i].name).join(" + ")}); ${compTeam.map(i=>PLAYERS[i].name).join(" + ")} compiles. ${robotP.name} is the Robot.`, {roles});
+
+    const challenge = chooseChallenge();
+    const hand = dealHand(8);
+    analytics.hands++;
+    push("draw", `Challenge drawn (#${challenge.id}, ${challenge.diff}) and kept hidden from ${robotP.name}. Hand: ${hand.filter(c=>c.cat!=="wild").length} cards + 2 wildcards.`, {challenge, hand});
+
+    wait(6 + rng.range(0,1)*6 + reader.read*3);
+
+    const plan = analyzeHand(hand, challenge.sig, rng);
+    analytics.wildcardUses += plan.wilds;
+    plan.missing.forEach(m => { analytics.missingByWord[m.word] = (analytics.missingByWord[m.word]||0)+1; });
+    if (plan.missing.length > 0) analytics.unsolvable++;
+    plan.stack.forEach(e => {
+      if (e.actionCard && !e.actionWild) analytics.plays[e.actionCard.word] = (analytics.plays[e.actionCard.word]||0)+1;
+      if (e.actionWild) analytics.plays["BLANK"] = (analytics.plays["BLANK"]||0)+1;
+      if (e.paramCard && !e.paramWild) analytics.plays[e.paramCard.word] = (analytics.plays[e.paramCard.word]||0)+1;
+      if (e.paramWild) analytics.plays["BLANK"] = (analytics.plays["BLANK"]||0)+1;
+    });
+
+    const buildTime = 8 + plan.stack.length*1.2 + rng.range(0,1)*4;
+    wait(buildTime);
+    push("plan", `Stack built with ${plan.stack.length} command slots${plan.missing.length?` — ${plan.missing.length} requirement(s) uncovered`:""}. Wildcards used: ${plan.wilds}.`, {challenge, hand, stack:plan.stack, missing:plan.missing});
+
+    let status = {glitch:null, cmdsLeft:0};
+    if (rng.chance(0.5)){
+      const cc = rng.pick(COMPILER_CARDS);
+      analytics.compilerCards++;
+      if (cc==="BUZZER"){
+        push("glitch", `Compiler card: BUZZER — pre-run warning; no token spent.`);
+      } else if (cc==="BUG INJECTION"){
+        const g = rng.pick(GLITCH_DECK);
+        props.glitch = Math.max(0, props.glitch-1);
+        status = {glitch:g, cmdsLeft:GLITCH_EFFECT[g].cmds};
+        analytics.glitch++;
+        push("glitch", `Compiler card: BUG INJECTION — injected Glitch "${g}". ${GLITCH_EFFECT[g].txt}`);
+      } else if (cc==="PATCH"){
+        push("glitch", `Compiler card: PATCH — Programmers must add one legal command of the Compiler's choice.`);
+      } else if (cc==="ROLLBACK"){
+        push("glitch", `Compiler card: ROLLBACK — Robot's last completed action will be undone once.`);
+      }
+    }
+
+    props.timerRunning = true;
+    timerCap = cfg.eco ? 120 : 90;
+    remaining = timerCap;
+    const timerStart = remaining;
+    push("run", `${reader.name} says "RUN." Timer starts at ${remaining}s.`, {challenge});
+
+    const quality = plan.stack.length ? 1 - plan.missing.length / plan.stack.length : 1;
+    const elapsedFrac = () => (timerStart - remaining) / timerStart;
+
+    function buzzRoll(issue, idx, progTeamLocal, compLocal){
+      if (props.buzzTokens <= 0){ analytics.buzz.missed++; analytics.errors.missed++; push("buzz", `Compiler reaches for the buzzer but has no buzz tokens left — ${issue} goes unchallenged.`, {stackIndex:idx}); return; }
+      let detected = rng.chance(Math.min(0.95, 0.45 + 0.4*compBest.acc - 0.12*(compBest.rt-1)));
+      if (!detected){ analytics.errors.missed++; push("error-"+issue.type, `MISSED by the Compiler: ${issue.msg}. No penalty.`, {stackIndex:idx}); wait(0.8); return; }
+      const latency = reaction(0.22, compBest, rng) + 0.3;
+      wait(latency);
+      props.buzzTokens--; props.buzzer = true;
+      analytics.buzz.used++;
+      analytics.errors[issue.type]++;
+      push("buzz", `${compBest.name} slams the buzzer: "COMPILER ERROR!" — ${issue.msg}.`, {stackIndex:idx, budget:issue.type});
+      wait(0.6);
+      const useOverrule = props.overrule > 0 && rng.chance(0.45);
+      if (useOverrule){
+        props.overrule--; props.buzzTokens++; analytics.overrule++; analytics.buzz.refunded++;
+        push("overrule", `Programmers spend the Overrule token — buzz cancelled, Compiler's token refunded. Play resumes.`, {stackIndex:idx});
+        wait(1.0);
+      } else {
+        remaining -= 10;
+        scores.team[progLabel] = Math.max(0, scores.team[progLabel]-1);
+        scores.team[progLabel==="A"?"B":"A"] += 2;
+        push("penalty", `Valid catch. ${progTeamLocal.map(i=>PLAYERS[i].name).join(" & ")} lose 10 seconds and 1 team token; Compilers gain 2.`, {stackIndex:idx});
+        wait(1.5 + rng.range(0,1));
+      }
+    }
+
+    let complete = true;
+    curRound = round;
+    for (let i=0;i<plan.stack.length;i++){
+      if (remaining <= 0){ break; }
+      const entry = plan.stack[i];
+      const actionWord = entry.missingAction || (entry.actionCard ? (entry.actionWild ? "BLANK(→"+entry.step.a+")" : entry.actionCard.word) : entry.step.a);
+      const paramWord = entry.paramCard ? (entry.paramWild ? "BLANK(→param)" : entry.paramCard.word) : null;
+      const cmd = paramWord ? `${actionWord} ${paramWord}` : actionWord;
+
+      let skipCmd = false, mult = 1, addT = 0;
+      if (status.glitch && status.cmdsLeft > 0){
+        const ge = GLITCH_EFFECT[status.glitch];
+        if (ge.mult) mult *= ge.mult;
+        if (ge.add) addT += ge.add;
+        if (ge.skip) skipCmd = true;
+        status.cmdsLeft--;
+      }
+
+      if (entry.missingAction){
+        push("error-syntax", `Step ${i+1}: no ${entry.step.a} card can be played — ${reader.name} improvises outside the deck.`, {stackIndex:i});
+        const issue = {type:"syntax", msg:`a required ${entry.step.a} command is missing from the stack`};
+        buzzRoll(issue, i, progTeam, compTeam);
+        wait(1.6*mult + addT);
+        complete = false;
+        continue;
+      }
+
+      const risky = entry.step.a==="BALANCE" || (entry.step.a==="MOVE" && entry.step.p==="dist");
+      if (risky && rng.chance(0.04)){
+        analytics.errors.safety++;
+        push("safety", `${robotP.name}: "WILL CAUSE INJURY." Command refused under the Safety Override — free, command replaced.`, {stackIndex:i});
+        wait(1.2);
+        continue;
+      }
+
+      const rf = reaction(0.42, reader, rng);
+      const words = actionWord.split(" ").length + (paramWord?2:0);
+      const readTime = (rf + words/2.5*reader.read*rng.jit(0.12)) * mult + addT;
+      push("read", `${reader.name} reads "${cmd}" verbatim.`, {stackIndex:i, card:actionWord});
+      wait(readTime);
+
+      if (skipCmd){
+        push("glitch", `SENSOR MALFUNCTION — the Robot ignores "${cmd}" entirely.`, {stackIndex:i});
+        wait(0.6);
+        status.glitch = null;
+        continue;
+      }
+
+      if (entry.missingParam){
+        push("error-syntax", `${actionWord} read with no ${entry.missingParam} parameter.`, {stackIndex:i});
+        buzzRoll({type:"syntax", msg:`${actionWord} is missing its ${entry.missingParam} parameter`}, i, progTeam, compTeam);
+        complete = false;
+        wait(0.8);
+      } else if (rng.chance(Math.min(0.22, 0.02 + 0.07*(1-quality) + 0.04*elapsedFrac()))){
+        push("error-syntax", `${reader.name} slips into plain English — not a word printed on any card.`, {stackIndex:i});
+        buzzRoll({type:"syntax", msg:`"${reader.name} used plain English instead of a card word"`}, i, progTeam, compTeam);
+      } else if (rng.chance(0.03 + 0.05*(1-quality))){
+        push("error-syntax", `Cards read out of order — a later command is streamed before its predecessor completes.`, {stackIndex:i});
+        buzzRoll({type:"syntax", msg:"the card sequence is read out of order"}, i, progTeam, compTeam);
+      }
+
+      const exec = (ACTION_TIME[entry.step.a]||1.4) * (0.75 + 0.25*robotP.rt) * rng.jit(0.14) * mult + addT;
+      push("execute", `${robotP.name} executes ${entry.step.a}${paramWord?" "+paramWord:""}.`, {stackIndex:i, card:actionWord});
+      wait(exec);
+
+      if (rng.chance(0.015*(1-quality)+0.01)){
+        push("error-runtime", `Runtime error during ${entry.step.a}: the Robot hits an obstacle (OutOfBounds).`, {stackIndex:i});
+        buzzRoll({type:"runtime", msg:`the Robot hit an obstacle during ${entry.step.a} (OutOfBounds)`}, i, progTeam, compTeam);
+        complete = false;
+        wait(0.6);
+      }
+
+      push("beep", `${robotP.name} beeps: "COMPLETE".`, {stackIndex:i, card:actionWord});
+      wait(reaction(0.22, reader, rng)*0.6 + 0.25);
+    }
+
+    let roundResult;
+    if (remaining > 0 && complete && plan.missing.length === 0){
+      scores.team[progLabel] += 3;
+      if (remaining > 0) scores.team[progLabel] += 1;
+      analytics.completed++;
+      roundResult = {round, completed:true, used:timerStart-remaining, team:progLabel};
+      push("complete", `Challenge COMPLETE with ${remaining.toFixed(1)}s to spare — ${progLabel==="A"?"Team A":"Team B"} scores +3 (+1 under time).`, {});
+    } else if (remaining <= 0){
+      analytics.timeout++;
+      roundResult = {round, completed:false, used:timerStart, team:progLabel, reason:"timeout"};
+      push("timeout", `Timer expired. Challenge incomplete.`, {});
+    } else {
+      roundResult = {round, completed:false, used:timerStart-remaining, team:progLabel, reason:"unsatisfiable"};
+      push("timeout", `Programmers call "STOP": the Challenge cannot be satisfied by this hand.`, {});
+    }
+    analytics.rounds.push(roundResult);
+
+    const comicId = rng.pick(progTeam.concat(compTeam, [cfg.robot]));
+    const comedyWeight = PLAYERS[comicId].comedy;
+    if (rng.chance(Math.min(0.95, comedyWeight*0.5))){
+      scores.personal[comicId].comedy++;
+      push("score", `Comedy Point to ${PLAYERS[comicId].name} for the funniest moment of the round.`, {});
+    }
+
+    props.timerRunning = false;
+    push("round-end", `Round ${round} over. Team A ${scores.team.A} · Team B ${scores.team.B}.`, {scores});
+    wait(4);
+  }
+
+  const winner = scores.team.A === scores.team.B ? "tie" : (scores.team.A > scores.team.B ? "A" : "B");
+  if (winner !== "tie"){
+    const winners = winner==="A" ? TEAM_A : TEAM_B;
+    winners.forEach(id => scores.personal[id].stars++);
+    push("session-end", `Session won by Team ${winner} (${scores.team[winner]} tokens). ${winners.map(i=>PLAYERS[i].name).join(" & ")} each earn +1 Session Star.`, {});
+  } else {
+    push("session-end", `Session ends in a tie (${scores.team.A}–${scores.team.B}). No Session Stars awarded.`, {});
+  }
+  if (analytics.completed > 0){
+    scores.personal[cfg.robot].robot++;
+    push("session-end", `${robotP.name} earns +1 Good Robot for a completed Challenge.`, {});
+  }
+
+  analytics.finalScores = JSON.parse(JSON.stringify(scores));
+  analytics.winner = winner;
+  analytics.missingTotal = Object.values(analytics.missingByWord).reduce((a,b)=>a+b,0);
+  return {events, analytics, challengeLog:null};
+}
+
+function buildDiagnostics(A){
+  const out = [];
+  const avgUsed = A.rounds.length ? A.rounds.reduce((s,r)=>s+r.used,0)/A.rounds.length : 0;
+  if (A.missingTotal > 0){
+    const top = Object.entries(A.missingByWord).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([w,n])=>`${w} (${n})`).join(", ");
+    out.push(`<b>Constraints:</b> ${A.missingTotal} required card(s) were absent from hands. Most-missing: ${top}. Consider adding copies of those cards or shifting Challenge requirements.`);
+  }
+  if (A.unsolvable > 0){
+    out.push(`<b>Solvability:</b> ${A.unsolvable} of ${A.hands} hands (${Math.round(100*A.unsolvable/A.hands)}%) could not meet the Challenge even using both wildcards.`);
+  }
+  const never = Object.keys(A.deck).filter(w => !A.draws[w]);
+  if (never.length){
+    out.push(`<b>Dead draws:</b> ${never.length} card type(s) never drawn this session: ${never.join(", ")}. Small sample — confirm across seeds before cutting cards.`);
+  }
+  const drawnNotPlayed = Object.keys(A.draws).filter(w => w!=="BLANK" && A.draws[w]>0 && !(A.plays[w]>0));
+  if (drawnNotPlayed.length){
+    out.push(`<b>Draw-vs-play gap:</b> drawn but never played: ${drawnNotPlayed.join(", ")}. These may be filler or situational dead weight.`);
+  }
+  if (A.wildcardUses > 0){
+    out.push(`<b>Wildcards:</b> used ${A.wildcardUses} time(s). High reliance signals the base deck cannot cover Challenge requirements alone.`);
+  }
+  if (avgUsed > 75) out.push(`<b>Time pressure:</b> rounds consume ~${avgUsed.toFixed(0)}s of the 90s budget on average. Consider +15–30s or easier Challenges.`);
+  else if (avgUsed > 0 && avgUsed < 35) out.push(`<b>Under-tension:</b> rounds finish in ~${avgUsed.toFixed(0)}s — the timer rarely bites. Consider harder Challenges or a shorter clock.`);
+  if (A.buzz.used === 0) out.push(`<b>Compiler idle:</b> no valid buzzes all session. Either hand quality is too high or Compiler incentives/penalties need tuning.`);
+  if (A.buzz.missed > 0) out.push(`<b>Missed errors:</b> ${A.buzz.missed} real error(s) went unchallenged (reaction/reach limits).`);
+  if (A.glitch === 0) out.push(`<b>Glitch deck idle:</b> no Glitch cards entered play. BUG INJECTION frequency may be too low to matter.`);
+  if (A.compilerCards === 0) out.push(`<b>Compiler cards idle:</b> none of the 5 Compiler cards were used.`);
+  if (!out.length) out.push(`No balance flags raised this session. Run more seeds to confirm stability.`);
+  return out;
+}
+
+function fmt(n, d){ return Number(n).toFixed(d===undefined?1:d); }
+
+const ui = {
+  tape:null, analytics:null, idx:0, T:0, running:false, raf:null, last:0, revealed:new Set(), timerCap:90
+};
+
+function renderPlayers(roles){
+  const el = $("#players");
+  const rmap = roles || ui.lastRoles || {};
+  el.innerHTML = "";
+  ALL_IDS.forEach(id => {
+    const p = PLAYERS[id];
+    const role = rmap[id] || "—";
+    const cls = role==="robot" ? "role-robot" : role.indexOf("programmer")===0 ? "role-programmer" : role.indexOf("compiler")===0 ? "role-compiler" : "";
+    const pp = ui.analytics ? ui.analytics.finalScores.personal[id] : null;
+    const personal = pp ? `★${pp.stars} · ☺${pp.comedy} · 🤖${pp.robot}` : "";
+    el.insertAdjacentHTML("beforeend",
+      `<div class="player ${id===cfg.robot?"active":""}">
+        <div><div class="nm">${p.name}</div><div class="sub">${p.rel}, ${p.age} · rt×${fmt(p.rt,2)}</div></div>
+        <div style="text-align:right"><span class="pill ${cls}">${role}</span><div class="sub" style="margin-top:3px">${personal}</div></div>
+      </div>`);
+  });
+}
+
+function renderProps(p){
+  if (!p) return;
+  $("#p-buzz").textContent = p.buzzTokens;
+  $("#p-over").textContent = p.overrule;
+  $("#p-glitch").textContent = p.glitch;
+  $("#p-comp").textContent = p.compilerCards;
+  $("#p-wild").textContent = 2;
+}
+
+function renderTimer(remaining, cap){
+  if (remaining===null || remaining===undefined){
+    $("#timerlbl").textContent = "Timer — not running";
+    $("#timerfill").style.width = "100%";
+    $("#timerfill").classList.remove("low");
+    $("#p-timer").textContent = "—";
+    return;
+  }
+  ui.timerCap = cap || ui.timerCap || 90;
+  const frac = Math.max(0, Math.min(1, remaining/ui.timerCap));
+  $("#timerfill").style.width = (frac*100)+"%";
+  $("#timerfill").classList.toggle("low", frac < 0.35);
+  $("#timerlbl").textContent = `Timer — ${fmt(Math.max(0,remaining))}s left`;
+  $("#p-timer").textContent = `${fmt(Math.max(0,remaining))}s`;
+}
+
+function renderScores(scores){
+  if (!scores) return;
+  $("#scoreA").textContent = scores.team.A;
+  $("#scoreB").textContent = scores.team.B;
+  const t = $("#personal"); t.innerHTML = "";
+  ALL_IDS.forEach(id => {
+    const p = scores.personal[id];
+    t.insertAdjacentHTML("beforeend", `<tr><td>${PLAYERS[id].name} <span class="tag">${PLAYERS[id].rel}</span></td><td>★${p.stars} ☺${p.comedy} 🤖${p.robot}</td></tr>`);
+  });
+}
+
+function chipHTML(cat, word, opts){
+  const c = cat || "wild";
+  const cls = ["chip", c, opts&&opts.cls].filter(Boolean).join(" ");
+  const label = (c==="wild" ? "BLANK" : word);
+  const sub = c==="wild" ? "wildcard" : c;
+  return `<span class="${cls}" data-uid="${opts&&opts.uid||""}">${label}<small>${sub}</small></span>`;
+}
+
+function renderHand(hand){
+  const el = $("#hand"); el.innerHTML = "";
+  if (!hand) return;
+  $("#handlbl").textContent = `${hand.length} cards (incl. 2 wild)`;
+  hand.forEach(c => el.insertAdjacentHTML("beforeend", chipHTML(c.cat, c.word, {uid:c.uid})));
+}
+
+function renderStack(stack, curIdx, doneThrough){
+  const el = $("#stack"); el.innerHTML = "";
+  if (!stack) return;
+  stack.forEach((entry, i) => {
+    const word = entry.missingAction ? "???" : (entry.actionWild ? "BLANK" : entry.actionCard.word);
+    const cat = entry.missingAction ? "errcard" : (entry.actionWild ? "wild" : entry.actionCard.cat);
+    const cls = [ (i===curIdx?"cur":""), (doneThrough!==undefined && i<=doneThrough?"done":"") ].filter(Boolean).join(" ");
+    let html = chipHTML(cat, word, {cls});
+    if (entry.paramCard) html += chipHTML(entry.paramWild?"wild":entry.paramCard.cat, entry.paramCard.word, {cls});
+    else if (entry.missingParam) html += `<span class="chip errcard">no ${entry.missingParam}<small>missing</small></span>`;
+    el.insertAdjacentHTML("beforeend", html);
+  });
+}
+
+function setRobotState(who, state){
+  $("#robotwho").textContent = who || "Robot";
+  $("#robotstate").textContent = state || "standing by";
+}
+
+function appendLog(ev){
+  const log = $("#log");
+  const row = document.createElement("div");
+  row.className = "ev k-" + ev.kind;
+  row.innerHTML = `<span class="t">R${ev.round||0} ${fmt(ev.t)}s</span>${ev.text}`;
+  log.appendChild(row);
+  log.scrollTop = log.scrollHeight;
+}
+
+function applyEvent(ev){
+  switch(ev.kind){
+    case "roles":
+      ui.lastRoles = ev.roles;
+      renderPlayers(ev.roles);
+      $("#sessionlbl").textContent = "round " + ev.round;
+      setRobotState(PLAYERS[cfg.robot].name, "standing by");
+      renderStack(null);
+      break;
+    case "draw":
+      ui.challenge = ev.challenge; ui.hand = ev.hand;
+      $("#chaltext").textContent = ev.challenge.text;
+      $("#difftag").textContent = ev.challenge.diff.toUpperCase() + (ev.challenge.script?" · SCRIPT":"");
+      $("#chalsig").textContent = `Required: ${ev.challenge.sig.map(s=>s.a+(s.p?"("+s.p+")":"")).join(" → ")} · hidden from ${PLAYERS[cfg.robot].name}`;
+      renderHand(ev.hand);
+      renderStack(null);
+      setRobotState(PLAYERS[cfg.robot].name, "oblivious to the Challenge");
+      renderTimer(null);
+      break;
+    case "plan":
+      ui.stack = ev.stack;
+      renderStack(ev.stack, -1);
+      break;
+    case "run":
+      $("#roundlbl").textContent = "Round " + ev.round + " · RUN";
+      break;
+    case "read":
+      renderStack(ui.stack, ev.stackIndex, ev.stackIndex-1);
+      setRobotState(PLAYERS[cfg.robot].name, `preparing: "${ev.card}"`);
+      $("#roundlbl").textContent = "Round " + ev.round + " · streaming";
+      break;
+    case "execute":
+      setRobotState(PLAYERS[cfg.robot].name, `executing: ${ev.card}…`);
+      break;
+    case "beep":
+      renderStack(ui.stack, ev.stackIndex+1>ui.stack.length-1?ui.stack.length-1:ev.stackIndex+1, ev.stackIndex);
+      setRobotState(PLAYERS[cfg.robot].name, `"COMPLETE"`);
+      break;
+    case "buzz":
+      $("#buzzer").classList.add("lit");
+      setTimeout(()=>$("#buzzer").classList.remove("lit"), 600);
+      setRobotState(PLAYERS[cfg.robot].name, "FROZEN — Compiler Error");
+      break;
+    case "complete":
+      setRobotState(PLAYERS[cfg.robot].name, "challenge complete");
+      break;
+    case "timeout":
+      setRobotState(PLAYERS[cfg.robot].name, "idle — round over");
+      break;
+  }
+  if (ev.props){ renderProps(ev.props); }
+  if (ev.remaining !== undefined && ev.remaining !== null) renderTimer(ev.remaining, ev.timerCap);
+  if (ev.scores) renderScores(ev.scores);
+  appendLog(ev);
+}
+
+function revealUpTo(T){
+  while (ui.idx < ui.tape.length && ui.tape[ui.idx].t <= T){
+    applyEvent(ui.tape[ui.idx]);
+    ui.idx++;
+  }
+}
+
+function frame(ts){
+  if (!ui.running) return;
+  if (!ui.last) ui.last = ts;
+  const dt = (ts - ui.last)/1000;
+  ui.last = ts;
+  const speed = Number($("#speed").value);
+  ui.T += dt * speed;
+  revealUpTo(ui.T);
+  if (ui.idx >= ui.tape.length){
+    ui.running = false;
+    finishPlayback();
+    return;
+  }
+  ui.raf = requestAnimationFrame(frame);
+}
+
+function finishPlayback(){
+  renderAnalytics();
+  $("#run").textContent = "Run";
+  $("#exportbtns").style.display = "flex";
+}
+
+function toggleRun(){
+  if (!ui.tape) startSim();
+  if (ui.idx >= ui.tape.length){ startSim(); }
+  ui.running = !ui.running;
+  $("#run").textContent = ui.running ? "Pause" : "Run";
+  if (ui.running){
+    ui.last = 0;
+    ui.raf = requestAnimationFrame(frame);
+  } else {
+    cancelAnimationFrame(ui.raf);
+    if (ui.idx >= ui.tape.length) finishPlayback();
+  }
+}
+
+function stepOnce(){
+  if (!ui.tape) startSim();
+  if (ui.idx >= ui.tape.length) return;
+  const ev = ui.tape[ui.idx];
+  ui.T = ev.t;
+  applyEvent(ev);
+  ui.idx++;
+  if (ui.idx >= ui.tape.length) finishPlayback();
+}
+
+function startSim(){
+  cancelAnimationFrame(ui.raf);
+  const cfg = readCfg();
+  const sim = simulate(cfg);
+  ui.tape = sim.events;
+  ui.analytics = sim.analytics;
+  ui.idx = 0; ui.T = 0; ui.running = false; ui.revealed = new Set();
+  ui.lastRoles = null; ui.challenge = null; ui.hand = null; ui.stack = null;
+  $("#log").innerHTML = "";
+  $("#exportbtns").style.display = "none";
+  renderPlayers(null);
+  renderScores({team:{A:0,B:0}, personal:Object.fromEntries(ALL_IDS.map(id=>[id,{stars:0,comedy:0,robot:0}]))});
+  renderStack(null);
+  renderTimer(null);
+  renderProps({buzzTokens:3, overrule:1, glitch:8, compilerCards:5, wild:2});
+  $("#analyticsbody").innerHTML = `<span class="muted">Simulating… press Run to play, Step to advance one event.</span>`;
+  $("#run").textContent = "Run";
+}
+
+function resetAll(){
+  cancelAnimationFrame(ui.raf);
+  ui.tape = null; ui.analytics = null; ui.idx = 0; ui.T = 0; ui.running = false;
+  startSim();
+}
+
+function readCfg(){
+  return {seed: $("#seed").value || "seed", eco: $("#eco").checked, adv: $("#adv").checked, robot: "quentin"};
+}
+
+function renderAnalytics(){
+  const A = ui.analytics;
+  if (!A){ return; }
+  const body = $("#analyticsbody");
+  const diag = buildDiagnostics(A).map(d => `<div class="diag">${d}</div>`).join("");
+  const roundRows = A.rounds.map(r => `<tr><td>R${r.round}</td><td>${r.completed?"✅ complete":"⛔ "+(r.reason||"fail")}</td><td class="n">${fmt(r.used,0)}s</td><td>Team ${r.team}</td></tr>`).join("");
+  const drawn = Object.entries(A.draws).sort((a,b)=>b[1]-a[1]);
+  const maxD = drawn.length ? drawn[0][1] : 1;
+  const cardRows = Object.keys(A.deck).map(w => {
+    const d = A.draws[w]||0, p = A.plays[w]||0, total = A.deck[w];
+    return `<tr><td>${w}</td><td class="n">${total}</td><td class="n">${d}</td><td class="n">${p}</td><td><span class="bar" style="width:${Math.round(60*d/maxD)}px"></span></td></tr>`;
+  }).join("");
+  body.innerHTML = `
+    <div style="margin-bottom:8px">
+      <span class="pill">${A.hands} hands</span>
+      <span class="pill">${A.completed}/${A.rounds.length} completed</span>
+      <span class="pill">${A.timeout} timeout</span>
+      <span class="pill">${A.buzz.used} buzzes</span>
+      <span class="pill">${A.overrule} overrules</span>
+      <span class="pill">${A.wildcardUses} wild uses</span>
+      <span class="pill">${A.missingTotal} missing reqs</span>
+    </div>
+    ${diag}
+    <table>
+      <tr><th>Round</th><th>Result</th><th class="n">Used</th><th>Team</th></tr>
+      ${roundRows}
+    </table>
+    <table style="margin-top:8px">
+      <tr><th>Card</th><th class="n">Deck</th><th class="n">Drawn</th><th class="n">Played</th><th>Draw freq</th></tr>
+      ${cardRows}
+    </table>
+    <div class="muted" style="margin-top:8px;font-size:11px">
+      Errors — syntax ${A.errors.syntax}, runtime ${A.errors.runtime}, missed ${A.errors.missed}, safety refusals ${A.errors.safety}.
+      Glitch cards played ${A.glitch}; Compiler cards used ${A.compilerCards}; buzz tokens wasted on overrule ${A.buzz.refunded}.
+    </div>`;
+}
+
+function exportJSON(){
+  const A = ui.analytics; if (!A) return;
+  download(`irobot-sim-${$("#seed").value}.json`, JSON.stringify(A, null, 2));
+}
+function exportCSV(){
+  const A = ui.analytics; if (!A) return;
+  const lines = ["card,deck_count,drawn,played"];
+  Object.keys(A.deck).forEach(w => lines.push([JSON.stringify(w), A.deck[w], A.draws[w]||0, A.plays[w]||0].join(",")));
+  lines.push("");
+  lines.push("round,result,seconds_used,team");
+  A.rounds.forEach(r => lines.push([r.round, r.completed?"complete":(r.reason||"fail"), fmt(r.used,1), r.team].join(",")));
+  lines.push("");
+  lines.push("metric,value");
+  ["hands","unsolvable","wildcardUses","completed","timeout"].forEach(k => lines.push(`${k},${A[k]}`));
+  ["syntax","runtime","missed","safety"].forEach(k => lines.push(`error_${k},${A.errors[k]}`));
+  download(`irobot-sim-${$("#seed").value}.csv`, lines.join("\n"));
+}
+function download(name, text){
+  const blob = new Blob([text], {type:"text/plain"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = name; a.click();
+  URL.revokeObjectURL(url);
+}
+
+const cfg = {seed:"irobot-0001", eco:false, adv:false, robot:"quentin"};
+function syncCfg(){
+  cfg.seed = $("#seed").value; cfg.eco = $("#eco").checked; cfg.adv = $("#adv").checked; cfg.robot = "quentin";
+}
+
+$("#run").addEventListener("click", toggleRun);
+$("#step").addEventListener("click", stepOnce);
+$("#reset").addEventListener("click", resetAll);
+$("#rand").addEventListener("click", () => { $("#seed").value = "irobot-" + Math.floor(Math.random()*1e9).toString(36); startSim(); });
+$("#seed").addEventListener("change", startSim);
+$("#eco").addEventListener("change", startSim);
+$("#adv").addEventListener("change", startSim);
+$("#expjson").addEventListener("click", exportJSON);
+$("#expcsv").addEventListener("click", exportCSV);
+
+(function init(){
+  const q = new URLSearchParams(location.search).get("seed");
+  if (q) $("#seed").value = q;
+  startSim();
+})();
+</script>
+</body>
+</html>
