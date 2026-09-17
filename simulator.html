@@ -558,8 +558,6 @@ function simulate(cfg){
       if (keep < cmds.length) truncated = true;
       cmds = cmds.slice(0, keep);
     }
-    const repeatCount = plan.roots.filter(n => n.kind === "repeat").length;
-    push("plan", `Program assembled: ${cmds.length} command(s) in ${assemblyTime.toFixed(0)}s of ${buildCap}s${repeatCount?` · ${repeatCount} REPEAT block(s)`:""}${plan.jokers?` · ${plan.jokers} Joker(s)`:""}${plan.targets?` · ${plan.targets} Target(s)`:""}.${truncated?" Build timer expired — forced RUN with an incomplete program.":""}`, {challenge, stack:cmds, sig, buildCap, buildLeft, truncated});
 
     let status = {glitch:null, cmdsLeft:0};
     if (rng.chance(0.5)){
@@ -570,15 +568,20 @@ function simulate(cfg){
       } else if (cc==="BUG INJECTION"){
         const g = rng.pick(GLITCH_DECK);
         props.glitch = Math.max(0, props.glitch-1);
-        status = {glitch:g, cmdsLeft:GLITCH_EFFECT[g].cmds};
         analytics.glitch++;
-        push("glitch", `Compiler card: BUG INJECTION — injected Glitch "${g}". ${GLITCH_EFFECT[g].txt}`);
+        const pos = cmds.length >= 3 ? 1 + rng.int(cmds.length - 2) : Math.floor(cmds.length / 2);
+        cmds.splice(pos, 0, {glitch:g});
+        push("glitch", `Compiler card: BUG INJECTION — "${g}" slipped into the program at card ${pos + 1} of ${cmds.length}. ${GLITCH_EFFECT[g].txt}.`);
       } else if (cc==="PATCH"){
         push("glitch", `Compiler card: PATCH — Programmers must add one legal command of the Compiler's choice.`);
       } else if (cc==="ROLLBACK"){
         push("glitch", `Compiler card: ROLLBACK — Robot's last completed action will be undone once.`);
       }
     }
+
+    const repeatCount = plan.roots.filter(n => n.kind === "repeat").length;
+    const requiredCount = cmds.filter(c => c.a).length;
+    push("plan", `Program assembled: ${requiredCount} command(s)${cmds.length>requiredCount?` + ${cmds.length-requiredCount} injected card(s)`:""} in ${assemblyTime.toFixed(0)}s of ${buildCap}s${repeatCount?` · ${repeatCount} REPEAT block(s)`:""}${plan.jokers?` · ${plan.jokers} Joker(s)`:""}${plan.targets?` · ${plan.targets} Target(s)`:""}.${truncated?" Build timer expired — forced RUN with an incomplete program.":""}`, {challenge, stack:cmds, sig, buildCap, buildLeft, truncated});
 
     props.timerRunning = true;
     timerCap = cfg.eco ? 90 : 60;
@@ -617,27 +620,43 @@ function simulate(cfg){
 
     let complete = !truncated;
     let executed = 0;
+    let lastCmd = null;
     curRound = round;
     for (let i=0;i<cmds.length;i++){
       if (remaining <= 0){ break; }
       const item = cmds[i];
+      if (item.glitch){
+        const g = item.glitch, ge = GLITCH_EFFECT[g];
+        push("glitch", `GLITCH "${g}" — the Robot ${ge.txt}.`, {stackIndex:i, posture});
+        if (ge.freeze) wait(ge.freeze);
+        else if (ge.fan) wait(ge.fan);
+        else if (ge.hum) wait(ge.hum);
+        if (ge.repeat){
+          if (lastCmd){
+            const rt = actionTime(lastCmd.a, lastCmd.paramWord, lastCmd, robotP, rng);
+            push("execute", `${robotP.name} repeats ${[lastCmd.a, lastCmd.paramWord, lastCmd.target].filter(Boolean).join(" ")}.`, {stackIndex:i, posture});
+            analytics.time.execute += rt.t;
+            wait(rt.t);
+            push("beep", `${robotP.name} beeps: "COMPLETE".`, {stackIndex:i, posture});
+            wait(TIMING.BEAT + turnGap(reader, rng));
+          }
+        } else {
+          status = {glitch:g, cmdsLeft:ge.cmds};
+        }
+        continue;
+      }
       const actionWord = item.a;
       const targetWord = item.target;
-      let skipCmd = false, mult = 1, addT = 0, corrupt = false, slip = false, deja = false;
+      let skipCmd = false, mult = 1, addT = 0, corrupt = false, slip = false;
       if (status.glitch && status.cmdsLeft > 0){
-        const g = status.glitch, ge = GLITCH_EFFECT[g];
+        const ge = GLITCH_EFFECT[status.glitch];
         if (ge.mult) mult *= ge.mult;
         if (ge.add) addT += ge.add;
         if (ge.skip) skipCmd = true;
         if (ge.slip) slip = true;
         if (ge.corrupt) corrupt = true;
-        if (ge.repeat) deja = true;
         status.cmdsLeft--;
         if (status.cmdsLeft <= 0) status.glitch = null;
-        push("glitch", `GLITCH "${g}" — the Robot ${ge.txt}.`, {stackIndex:i, posture});
-        if (ge.freeze) wait(ge.freeze);
-        else if (ge.fan) wait(ge.fan);
-        else if (ge.hum) wait(ge.hum);
       }
       let paramWord = item.paramWord;
       if (slip){
@@ -690,27 +709,12 @@ function simulate(cfg){
       push("execute", `${robotP.name} executes ${cmd}.`, {stackIndex:i, card:actionWord, posture});
       wait(exec);
 
-      if (rng.chance(0.015*(1-quality)+0.01)){
-        push("error-runtime", `Runtime error during ${actionWord}: the Robot hits an obstacle (OutOfBounds).`, {stackIndex:i});
-        buzzRoll({type:"runtime", msg:`the Robot hit an obstacle during ${actionWord} (OutOfBounds)`}, i, progTeam, compTeam);
-        complete = false;
-        wait(0.6);
-      }
-
       push("beep", `${robotP.name} beeps: "COMPLETE".`, {stackIndex:i, card:actionWord, posture});
       executed++;
+      lastCmd = {a:actionWord, p:item.p, d:item.d, paramWord, target:targetWord};
       const gap = TIMING.BEAT + turnGap(reader, rng);
       analytics.time.gap += gap;
       wait(gap);
-
-      if (deja){
-        const at2 = actionTime(actionWord, paramWord, item, robotP, rng);
-        push("glitch", `DEJA VU — ${robotP.name} repeats "${cmd}".`, {stackIndex:i, posture});
-        wait(at2.t);
-        analytics.time.execute += at2.t;
-        push("beep", `${robotP.name} beeps: "COMPLETE".`, {stackIndex:i, card:actionWord, posture});
-        wait(TIMING.BEAT + turnGap(reader, rng));
-      }
     }
 
     if (posture === "standing"){
@@ -722,7 +726,7 @@ function simulate(cfg){
     }
 
     let roundResult;
-    if (remaining > 0 && complete && executed === cmds.length){
+    if (remaining > 0 && complete && executed === requiredCount){
       scores.team[progLabel] += 3;
       analytics.completed++;
       analytics.challenges[challenge.id].completed++;
@@ -877,6 +881,10 @@ function renderStack(stack, curIdx, doneThrough){
   if (!stack) return;
   stack.forEach((c, i) => {
     const cls = [ (i===curIdx?"cur":""), (doneThrough!==undefined && i<=doneThrough?"done":"") ].filter(Boolean).join(" ");
+    if (c.glitch){
+      el.insertAdjacentHTML("beforeend", `<span class="chip glitch ${cls}">BUG: ${c.glitch}<small>injected</small></span>`);
+      return;
+    }
     let html = "";
     if (c.repeated) html += `<span class="chip wild">↻</span>`;
     html += chipHTML("action", c.a, {cls});
@@ -937,6 +945,10 @@ function applyEvent(ev){
       break;
     case "posture":
       setRobotState(PLAYERS[cfg.robot].name, ev.posture === "standing" ? "standing" : "seated");
+      break;
+    case "glitch":
+      if (ui.stack && ev.stackIndex !== undefined) renderStack(ui.stack, ev.stackIndex, ev.stackIndex-1);
+      setRobotState(PLAYERS[cfg.robot].name, "GLITCHED");
       break;
     case "beep":
       renderStack(ui.stack, ev.stackIndex+1>ui.stack.length-1?ui.stack.length-1:ev.stackIndex+1, ev.stackIndex);
@@ -1080,7 +1092,7 @@ function renderAnalytics(){
     </div>`;
 }
 
-const SIM_VERSION = "0.6.2";
+const SIM_VERSION = "0.6.3";
 
 function logLines(){
   return (ui.tape || []).map(ev => {
