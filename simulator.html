@@ -88,6 +88,7 @@
   .log .k-timeout{border-color:var(--glitch);color:#ff9b9b;font-weight:700}
   .log .k-safety{border-color:#e6b800;color:#ffe08a}
   .log .k-posture{border-color:#33456b;color:#bcd6ff}
+  .log .k-control{border-color:var(--advanced);color:#d9c9ff}
   .log .k-freeze{border-color:#e03131;color:#ffb3b3;font-weight:700}
   .log .k-round-end,.log .k-session-end{border-color:#7048e8;color:#d9c9ff;font-weight:700}
   .log .k-roles,.log .k-draw,.log .k-plan,.log .k-run{border-color:#33456b}
@@ -276,7 +277,8 @@ const CHALLENGES = [
     [{a:"ROTATE",p:"angle"},{a:"POINT",t:"NEAREST HUMAN"},{a:"BEEP"}]]},
   {id:3,diff:"easy",text:"Pick up the cup and hand it to the person on your right.",sigs:[
     [{a:"ROTATE",p:"angle"},{a:"GRASP",t:"THE CUP"},{a:"RELEASE",t:"NEAREST HUMAN"}],
-    [{a:"GRASP",t:"THE CUP"},{a:"MOVE",p:"dist"},{a:"RELEASE",t:"NEAREST HUMAN"}]]},
+    [{a:"GRASP",t:"THE CUP"},{a:"MOVE",p:"dist"},{a:"RELEASE",t:"NEAREST HUMAN"}],
+    [{a:"GRASP",t:"THE CUP"},{a:"MOVE",p:"dir",t:"NEAREST HUMAN"},{a:"RELEASE",t:"NEAREST HUMAN"}]]},
   {id:4,diff:"easy",text:"Raise both arms, then lower them.",sigs:[
     [{a:"RAISE ARM"},{a:"LOWER ARM"}]]},
   {id:5,diff:"easy",text:"Look at the nearest human and beep.",sigs:[
@@ -287,7 +289,8 @@ const CHALLENGES = [
   {id:7,diff:"medium",text:"Walk to the table, pick up the empty glass, and set it on the nearest surface.",sigs:[
     [{a:"MOVE",p:"dist",d:3.0,t:"NEAREST SURFACE"},{a:"GRASP",t:"THE GLASS"},{a:"RELEASE",t:"NEAREST SURFACE"}],
     [{a:"MOVE",p:"dist",d:3.0,t:"NEAREST SURFACE"},{a:"LOOK",t:"THE GLASS"},{a:"GRASP",t:"THE GLASS"},{a:"RELEASE",t:"NEAREST SURFACE"}],
-    [{a:"ROTATE",p:"angle"},{a:"MOVE",p:"dist",d:3.0,t:"NEAREST SURFACE"},{a:"GRASP",t:"THE GLASS"},{a:"RELEASE",t:"NEAREST SURFACE"}]]},
+    [{a:"ROTATE",p:"angle"},{a:"MOVE",p:"dist",d:3.0,t:"NEAREST SURFACE"},{a:"GRASP",t:"THE GLASS"},{a:"RELEASE",t:"NEAREST SURFACE"}],
+    [{a:"MOVE",p:"speed",d:3.0,t:"NEAREST SURFACE"},{a:"GRASP",t:"THE GLASS"},{a:"RELEASE",t:"NEAREST SURFACE"}]]},
   {id:8,diff:"medium",text:"Put the ball on the table, then hand the cup to a human.",sigs:[
     [{a:"GRASP",t:"THE BALL"},{a:"MOVE",p:"dist",t:"NEAREST SURFACE"},{a:"RELEASE"},{a:"GRASP",t:"THE CUP"},{a:"MOVE",p:"dist",t:"NEAREST HUMAN"},{a:"RELEASE"}],
     [{a:"MOVE",p:"dist"},{a:"GRASP",t:"THE BALL"},{a:"MOVE",p:"dist",t:"NEAREST SURFACE"},{a:"RELEASE"},{a:"GRASP",t:"THE CUP"},{a:"MOVE",p:"dist",t:"NEAREST HUMAN"},{a:"RELEASE"}]]},
@@ -314,7 +317,22 @@ const CHALLENGES = [
   {id:16,diff:"script",script:true,text:"Collect one object from each human and deposit them in the box.",sigs:[
     [{a:"GRASP"},{a:"MOVE",p:"dist",d:1.5,t:"NEAREST HUMAN"},{a:"RELEASE",t:"THE BOX"},{a:"GRASP"},{a:"MOVE",p:"dist",d:1.5,t:"NEAREST HUMAN"},{a:"RELEASE",t:"THE BOX"},{a:"GRASP"},{a:"MOVE",p:"dist",d:1.5,t:"NEAREST HUMAN"},{a:"RELEASE",t:"THE BOX"}]]},
   {id:17,diff:"script",script:true,text:"Move, rotate, grasp, release, and beep — in exactly that order, twice.",sigs:[
-    [{a:"MOVE",p:"dist"},{a:"ROTATE",p:"angle"},{a:"GRASP"},{a:"RELEASE"},{a:"BEEP"},{a:"MOVE",p:"dist"},{a:"ROTATE",p:"angle"},{a:"GRASP"},{a:"RELEASE"},{a:"BEEP"}]]}
+    [{a:"MOVE",p:"dist"},{a:"ROTATE",p:"angle"},{a:"GRASP"},{a:"RELEASE"},{a:"BEEP"},{a:"MOVE",p:"dist"},{a:"ROTATE",p:"angle"},{a:"GRASP"},{a:"RELEASE"},{a:"BEEP"}]]},
+  {id:18,diff:"easy",text:"Pass the ball to your other hand.",sigs:[
+    [{a:"GRASP",t:"THE BALL"},{a:"RELEASE",t:"MY OTHER HAND"}],
+    [{a:"GRASP",t:"THE BALL"},{a:"MOVE",p:"dir"},{a:"RELEASE",t:"MY OTHER HAND"}]]},
+  {id:19,diff:"easy",text:"Freeze, then beep.",sigs:[
+    [{a:"FREEZE"},{a:"BEEP"}]]},
+  {id:20,diff:"easy",text:"Open your mouth, then close your eyes.",sigs:[
+    [{a:"OPEN MOUTH"},{a:"CLOSE EYES"}]]},
+  {id:21,diff:"medium",text:"While there is no obstacle, walk to the table and pick up the glass.",sigs:[
+    [{ctl:"WHILE",sensor:"NO OBSTACLE",body:[{a:"MOVE",p:"dist",d:3.0,t:"NEAREST SURFACE"}]},{a:"GRASP",t:"THE GLASS"}]]},
+  {id:22,diff:"medium",text:"If the touch sensor is pressed, grasp the object in front and release it.",sigs:[
+    [{ctl:"IF",sensor:"TOUCH SENSOR = PRESSED",body:[{a:"GRASP",t:"OBJECT IN FRONT"},{a:"RELEASE"}]}]]},
+  {id:23,diff:"easy",text:"If you hear a sound, beep.",sigs:[
+    [{ctl:"IF",sensor:"HEAR SOUND = YES",body:[{a:"BEEP"}]}]]},
+  {id:24,diff:"easy",text:"While the distance is under 6 inches, freeze.",sigs:[
+    [{ctl:"WHILE",sensor:"DISTANCE < 6 INCHES",body:[{a:"FREEZE"}]}]]}
 ];
 
 function hashSeed(str){
@@ -377,7 +395,8 @@ function actionTime(action, paramWord, step, robot, rng){
       if (paramWord === "2 STEPS") d = 2 * TIMING.STEP_M;
       else d = TIMING.STEP_M;
     }
-    return {t:(d / TIMING.WALK_MPS) * robot.mobility, kind:"move"};
+    const slow = paramWord === "SPEED 50%" ? 2 : 1;
+    return {t:(d / TIMING.WALK_MPS) * robot.mobility * slow, kind:"move"};
   }
   if (action === "ROTATE") return {t:j(TURN_TIME[paramWord] || 1.0) * robot.motor, kind:"move"};
   if (action === "SPIN") return {t:j(TURN_TIME["SPIN"]) * robot.mobility, kind:"move"};
@@ -400,9 +419,16 @@ function deckCounts(cfg){
 
 const TARGET_WORDS = ["OBJECT IN FRONT","NEAREST SURFACE","NEAREST HUMAN","MY OTHER HAND","THE GLASS","THE BALL","THE BOX","THE CUP","THE HAT"];
 const SENSOR_WORDS = ["DISTANCE < 6 INCHES","TOUCH SENSOR = PRESSED","HEAR SOUND = YES","NO OBSTACLE"];
-const PARAM_WORDS = {dist:["1 STEP","2 STEPS"], angle:["90 DEGREES","180 DEGREES"], dir:["LEFT","RIGHT","FORWARD"]};
+const PARAM_WORDS = {dist:["1 STEP","2 STEPS"], angle:["90 DEGREES","180 DEGREES"], dir:["LEFT","RIGHT","FORWARD"], speed:["SPEED 50%"]};
+
+function stepsToNodes(steps){
+  return steps.map(s => s.ctl
+    ? {kind: s.ctl === "IF" ? "if" : "while", sensor: s.sensor, body: stepsToNodes(s.body)}
+    : {kind:"cmd", step:s});
+}
 
 function collapseRepeats(steps){
+  if (steps.some(s => s.ctl)) return stepsToNodes(steps);
   const key = s => s.a + "|" + (s.p||"") + "|" + (s.d||"") + "|" + (s.t||"");
   const n = steps.length;
   for (let p=1; p<=Math.floor(n/2); p++){
@@ -411,7 +437,7 @@ function collapseRepeats(steps){
     for (let i=p;i<n;i++){ if (key(steps[i]) !== key(steps[i-p])){ ok=false; break; } }
     if (ok) return [{kind:"repeat", n:n/p, body:steps.slice(0,p).map(s => ({kind:"cmd", step:s}))}];
   }
-  return steps.map(s => ({kind:"cmd", step:s}));
+  return stepsToNodes(steps);
 }
 
 function walkNodes(nodes, fn){
@@ -421,11 +447,14 @@ function walkNodes(nodes, fn){
 function assembleProgram(challenge, cfg, rng, reader){
   const sig = rng.pick(challenge.sigs);
   const roots = collapseRepeats(sig);
-  let targets = 0;
+  let targets = 0, sensors = 0;
   const deck = deckCounts(cfg);
   const used = {};
   walkNodes(roots, nd => {
-    if (nd.kind !== "cmd") return;
+    if (nd.kind !== "cmd"){
+      if (nd.sensor){ sensors++; used[nd.sensor] = (used[nd.sensor]||0)+1; }
+      return;
+    }
     if (nd.step.p) nd.paramWord = rng.pick(PARAM_WORDS[nd.step.p] || ["1 STEP"]);
     if (nd.step.t){ nd.target = nd.step.t; targets++; }
     used[nd.step.a] = (used[nd.step.a]||0)+1;
@@ -438,8 +467,8 @@ function assembleProgram(challenge, cfg, rng, reader){
   });
   let cards = 0, controls = 0;
   walkNodes(roots, nd => { if (nd.kind === "cmd") cards++; else controls++; });
-  const assemblyTime = cards * (pickup(reader, rng) + 0.4) + controls * 1.0 + rng.range(1, 3);
-  return {sig, roots, cardCount:cards, controlCount:controls, assemblyTime, targets, sensors:0, jokers, shortage};
+  const assemblyTime = 5 + cards * (pickup(reader, rng) + deliberate(reader, rng) + 0.9) + controls * 2;
+  return {sig, roots, cardCount:cards, controlCount:controls, assemblyTime, targets, sensors, jokers, shortage};
 }
 
 function expandProgram(roots, rng){
@@ -448,6 +477,10 @@ function expandProgram(roots, rng){
     list.forEach(nd => {
       if (nd.kind === "cmd") out.push({a:nd.step.a, p:nd.step.p, d:nd.step.d, target:nd.target||null, paramWord:nd.paramWord||null, repeated});
       else if (nd.kind === "repeat"){ for (let i=0;i<nd.n;i++) walk(nd.body, true); }
+      else if (nd.kind === "if" || nd.kind === "while"){
+        out.push({control: nd.kind.toUpperCase(), sensor: nd.sensor});
+        walk(nd.body, repeated);
+      }
       else walk(nd.body, repeated);
     });
   })(roots, false);
@@ -482,7 +515,7 @@ function simulate(cfg){
   const analytics = {
     deck: deckCounts(cfg), plays:{}, jokersUsed:0, targetsUsed:0, sensorsUsed:0, repeatBlocks:0, cardShortages:0, buildTimeouts:0,
     rounds:[], errors:{syntax:0,runtime:0,missed:0,safety:0},
-    buzz:{used:0,refunded:0,missed:0}, overrule:0, glitch:0, compilerCards:0, completed:0, timeout:0,
+    buzz:{used:0,refunded:0,missed:0}, overrule:0, glitch:0, compilerCards:0, completed:0, timeout:0, bonus:0,
     challenges:{}, openings:{},
     time:{draft:0, read:0, execute:0, move:0, arm:0, stand:0, gap:0, buzz:0, freeze:0}
   };
@@ -526,17 +559,18 @@ function simulate(cfg){
     analytics.challenges[challenge.id].drawn++;
     push("draw", `Challenge drawn (#${challenge.id}, ${challenge.diff}) and kept hidden from ${robotP.name}. Programmers take the full deck + 2 Jokers.`, {challenge});
 
-    const buildCap = cfg.eco ? 120 : 90;
+    const buildCap = cfg.eco ? 60 : 45;
     const plan = assembleProgram(challenge, cfg, rng, reader);
     const sig = plan.sig;
-    analytics.openings[sig[0].a] = (analytics.openings[sig[0].a]||0)+1;
+    const openKey = sig[0].a || sig[0].ctl || "CONTROL";
+    analytics.openings[openKey] = (analytics.openings[openKey]||0)+1;
     analytics.jokersUsed += plan.jokers;
     analytics.targetsUsed += plan.targets;
     analytics.sensorsUsed += plan.sensors;
     analytics.cardShortages += plan.shortage;
     analytics.repeatBlocks += plan.roots.filter(n => n.kind === "repeat").length;
     walkNodes(plan.roots, nd => {
-      if (nd.kind === "if" && nd.sensor){ analytics.plays[nd.sensor] = (analytics.plays[nd.sensor]||0)+1; return; }
+      if ((nd.kind === "if" || nd.kind === "while") && nd.sensor){ analytics.plays[nd.sensor] = (analytics.plays[nd.sensor]||0)+1; return; }
       if (nd.kind !== "cmd") return;
       analytics.plays[nd.step.a] = (analytics.plays[nd.step.a]||0)+1;
       if (nd.paramWord) analytics.plays[nd.paramWord] = (analytics.plays[nd.paramWord]||0)+1;
@@ -625,6 +659,11 @@ function simulate(cfg){
     for (let i=0;i<cmds.length;i++){
       if (remaining <= 0){ break; }
       const item = cmds[i];
+      if (item.control){
+        push("control", `${item.control} ${item.sensor} — condition met; running its block.`, {stackIndex:i, posture});
+        wait(0.4);
+        continue;
+      }
       if (item.glitch){
         const g = item.glitch, ge = GLITCH_EFFECT[g];
         push("glitch", `GLITCH "${g}" — the Robot ${ge.txt}.`, {stackIndex:i, posture});
@@ -727,11 +766,13 @@ function simulate(cfg){
 
     let roundResult;
     if (remaining > 0 && complete && executed === requiredCount){
-      scores.team[progLabel] += 3;
+      const bonus = remaining >= 0.5 * timerCap ? 2 : (remaining >= 0.25 * timerCap ? 1 : 0);
+      scores.team[progLabel] += 3 + bonus;
       analytics.completed++;
+      analytics.bonus = (analytics.bonus || 0) + bonus;
       analytics.challenges[challenge.id].completed++;
       roundResult = {round, completed:true, used:timerStart-remaining, team:progLabel};
-      push("complete", `Challenge COMPLETE with ${remaining.toFixed(1)}s to spare — ${progLabel==="A"?"Team A":"Team B"} scores +3.`, {});
+      push("complete", `Challenge COMPLETE with ${remaining.toFixed(1)}s to spare — ${progLabel==="A"?"Team A":"Team B"} scores +${3 + bonus}${bonus ? ` (incl. +${bonus} speed bonus)` : ""}.`, {});
     } else if (remaining <= 0){
       analytics.timeout++;
       roundResult = {round, completed:false, used:timerStart, team:progLabel, reason:"timeout"};
@@ -775,7 +816,8 @@ function simulate(cfg){
 function buildDiagnostics(A){
   const out = [];
   const avgUsed = A.rounds.length ? A.rounds.reduce((s,r)=>s+r.used,0)/A.rounds.length : 0;
-  out.push(`<b>Assembly:</b> ${A.rounds.length} round(s) built; ${A.buildTimeouts} hit the build timer; ${A.cardShortages} card shortage(s); ${A.jokersUsed} Joker(s), ${A.targetsUsed} Target(s), ${A.repeatBlocks} REPEAT block(s) used.`);
+  out.push(`<b>Assembly:</b> ${A.rounds.length} round(s) built; ${A.buildTimeouts} hit the 45s build timer; ${A.cardShortages} card shortage(s); ${A.jokersUsed} Joker(s), ${A.targetsUsed} Target(s), ${A.repeatBlocks} REPEAT block(s) used.`);
+  out.push(`<b>Speed bonus:</b> ${A.bonus} token(s) earned from finishing with time to spare.`);
   const unused = Object.keys(A.deck).filter(w => !(A.plays[w] > 0));
   if (unused.length) out.push(`<b>Never played:</b> ${unused.join(", ")}. With the full deck, these are unused rather than undrawable — consider whether they earn their place.`);
   if (A.openings){
@@ -885,6 +927,10 @@ function renderStack(stack, curIdx, doneThrough){
       el.insertAdjacentHTML("beforeend", `<span class="chip glitch ${cls}">BUG: ${c.glitch}<small>injected</small></span>`);
       return;
     }
+    if (c.control){
+      el.insertAdjacentHTML("beforeend", `<span class="chip advanced ${cls}">${c.control}<small>${c.sensor}</small></span>`);
+      return;
+    }
     let html = "";
     if (c.repeated) html += `<span class="chip wild">↻</span>`;
     html += chipHTML("action", c.a, {cls});
@@ -949,6 +995,9 @@ function applyEvent(ev){
     case "glitch":
       if (ui.stack && ev.stackIndex !== undefined) renderStack(ui.stack, ev.stackIndex, ev.stackIndex-1);
       setRobotState(PLAYERS[cfg.robot].name, "GLITCHED");
+      break;
+    case "control":
+      if (ui.stack && ev.stackIndex !== undefined) renderStack(ui.stack, ev.stackIndex, ev.stackIndex-1);
       break;
     case "beep":
       renderStack(ui.stack, ev.stackIndex+1>ui.stack.length-1?ui.stack.length-1:ev.stackIndex+1, ev.stackIndex);
@@ -1092,7 +1141,7 @@ function renderAnalytics(){
     </div>`;
 }
 
-const SIM_VERSION = "0.6.3";
+const SIM_VERSION = "0.7.0";
 
 function logLines(){
   return (ui.tape || []).map(ev => {
@@ -1145,7 +1194,7 @@ function download(name, text){
 
 function aggregateRuns(runs){
   const A = {
-    sessions: runs.length, rounds:0, completed:0, timeouts:0, buildTimeouts:0,
+    sessions: runs.length, rounds:0, completed:0, timeouts:0, buildTimeouts:0, bonus:0,
     cardShortages:0, jokersUsed:0, targetsUsed:0, sensorsUsed:0, repeatBlocks:0,
     winners:{A:0,B:0,tie:0}, tokens:{A:0,B:0}, marginSum:0,
     usedSum:0, usedCount:0,
@@ -1158,6 +1207,7 @@ function aggregateRuns(runs){
   runs.forEach(r => {
     const a = r.analytics;
     A.rounds += a.rounds.length; A.completed += a.completed; A.timeouts += a.timeout;
+    A.bonus += a.bonus||0;
     A.buildTimeouts += a.buildTimeouts||0; A.cardShortages += a.cardShortages||0;
     A.jokersUsed += a.jokersUsed||0; A.targetsUsed += a.targetsUsed||0;
     A.sensorsUsed += a.sensorsUsed||0; A.repeatBlocks += a.repeatBlocks||0;
@@ -1194,7 +1244,7 @@ function buildAggregateDiagnostics(A){
   out.push(`<b>Batch:</b> ${A.sessions} sessions · ${A.rounds} rounds · completion ${A.completed}/${A.rounds} (${Math.round(100*A.completionRate)}%) · ${A.buildTimeouts} build timeout(s) · ${A.timeouts} execute timeout(s).`);
   out.push(`<b>Wins:</b> Team A ${A.winners.A} · Team B ${A.winners.B} · ties ${A.winners.tie}. Avg tokens A ${A.avgTokensA.toFixed(1)}, B ${A.avgTokensB.toFixed(1)} · avg margin ${A.avgMargin.toFixed(1)}.`);
   out.push(`<b>Time:</b> average round spends ${A.avgUsed.toFixed(1)}s executing of the 60s budget.`);
-  out.push(`<b>Assembly:</b> ${A.jokersUsed} Joker(s) · ${A.targetsUsed} Target(s) · ${A.repeatBlocks} REPEAT block(s) · ${A.cardShortages} card shortage(s).`);
+  out.push(`<b>Assembly:</b> ${A.jokersUsed} Joker(s) · ${A.targetsUsed} Target(s) · ${A.repeatBlocks} REPEAT block(s) · ${A.cardShortages} card shortage(s) · ${A.bonus} speed bonus token(s).`);
   {
     const ops = Object.entries(A.openings).sort((a,b)=>b[1]-a[1]);
     const total = ops.reduce((s,e)=>s+e[1],0);

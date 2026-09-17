@@ -8,7 +8,7 @@
 ![Play time: 30-60 min](https://img.shields.io/badge/PLAY_TIME-30--60_MIN-blue?style=for-the-badge)
 ![Ages: 9+](https://img.shields.io/badge/AGES-9%2B-orange?style=for-the-badge)
 ![Format: Print & Play](https://img.shields.io/badge/FORMAT-PRINT_%26_PLAY-brightgreen?style=for-the-badge)
-![Version: v0.6.3](https://img.shields.io/badge/VERSION-v0.6.3-informational?style=for-the-badge)
+![Version: v0.7.0](https://img.shields.io/badge/VERSION-v0.7.0-informational?style=for-the-badge)
 
 **Share link:** https://github.com/bayowulf/irobot
 
@@ -109,7 +109,7 @@ Gather these before the first session. None of them are printed cards.
 
 | Item | Qty | Notes |
 | --- | --- | --- |
-| Timer (phone or stopwatch) | 1 | Two phases: **build 90s** then **execute 60s**. Eco: 120s / 90s (§10). |
+| Timer (phone or stopwatch) | 1 | Two phases: **build 45s** then **execute 60s**. Eco: 60s / 90s (§10). |
 | Buzzer (or a bell) | 1 | The Compiler's "COMPILER ERROR!" slam (§6). |
 | Buzz tokens (coins/chips) | 3 | The Compiler's buzzes, per round. |
 | Overrule token (a different coin) | 1 | Programmers, cancels one buzz per round. |
@@ -135,7 +135,7 @@ Gather these before the first session. None of them are printed cards.
 | --- | --- |
 | Robot | Choose the neutral Robot. Keep the Challenge out of their sight and earshot. |
 | Teams | Split the other four into two teams of two. Sit so the Compiler can see the Robot. |
-| Timer | Two phases: **build 90 seconds**, then **execute 60 seconds** (use a phone). |
+| Timer | Two phases: **build 45 seconds**, then **execute 60 seconds** (use a phone). |
 | Programmer deck | The **entire coding deck**, face up, plus **2 Jokers** (stand in for any one card). No hand is dealt — every card is available. |
 | Programmer kit | **1 Overrule token** (cancels one buzz per round). |
 | Compiler kit | **3 buzz tokens**, the Glitch deck, and the Compiler cards. |
@@ -148,7 +148,7 @@ Gather these before the first session. None of them are printed cards.
 
 1. **Reveal the Challenge** — the Programmers read the Challenge (silently, away from the
    Robot) and take the **entire coding deck** plus the 2 Jokers. The **build timer starts
-   (90 seconds)**.
+   (45 seconds)**.
 2. **Assemble a Program** — lay cards top-to-bottom in execution order. Every movement
    Action (MOVE, ROTATE, SPIN) must be paired with a Parameter card (see The Pairing Rule).
    Targets and Sensors are optional modifiers; `REPEAT` wraps a sub-stack block.
@@ -242,6 +242,7 @@ night).
 | Event | Tokens |
 | --- | --- |
 | Programmers complete the Challenge | **+3** |
+| **Speed bonus** (completion only): finish with ≥ half the execute timer left **+2** · ≥ quarter left **+1** | **+1/+2** |
 | Each **valid** Compiler Error | **−1** |
 | Compiler: each **valid** catch | **+2** |
 
@@ -297,7 +298,7 @@ For a grandparent, an injured player, or a tired kid.
 
 - When Eco Mode is on, **at least half the cards in the program must be seated/arm-only**
   (RAISE ARM, LOWER ARM, GRASP, RELEASE, POINT, LOOK, BEEP, FREEZE, OPEN MOUTH).
-- Eco Mode also lengthens both timers: **build 120 seconds, execute 90 seconds**. Limits are
+- Eco Mode also lengthens both timers: **build 60 seconds, execute 90 seconds**. Limits are
   chosen up front and never extended mid-round.
 
 ---
@@ -454,6 +455,18 @@ sequence. Different teams should build different programs.
 16. Collect one object from each human and deposit them in the box.
 17. Move, rotate, grasp, release, and beep — in exactly that order, twice.
 
+### Extra Challenges (cards that were previously unused)
+18. *(Easy)* Pass the ball to your other hand. — uses **MY OTHER HAND**
+19. *(Easy)* Freeze, then beep. — uses **FREEZE**
+20. *(Easy)* Open your mouth, then close your eyes. — uses **OPEN MOUTH** / **CLOSE EYES**
+21. *(Medium)* While there is no obstacle, walk to the table and pick up the glass. — uses **WHILE** + **NO OBSTACLE**
+22. *(Medium)* If the touch sensor is pressed, grasp the object in front and release it. — uses **IF / THEN** + **TOUCH SENSOR = PRESSED**
+23. *(Easy)* If you hear a sound, beep. — uses **HEAR SOUND = YES**
+24. *(Easy)* While the distance is under 6 inches, freeze. — uses **DISTANCE < 6 INCHES**
+
+> Direction Parameters (`LEFT` / `RIGHT` / `FORWARD`) and `SPEED 50%` appear as alternate
+> MOVE Parameters in several Challenges above.
+
 > With the full deck available, difficulty comes from **program length and order**, not from
 > what you happened to draw. Long Challenges can be built with `REPEAT` blocks instead of
 > extra copies.
@@ -487,7 +500,7 @@ new Robot. Early end only by unanimous consent.
 
 **Programmers' deck:** the whole coding deck + 2 Jokers, every round. No hand is dealt.
 
-**Timers:** build 90s (assemble the program) then execute 60s (run it). Eco: 120s / 90s.
+**Timers:** build 45s (assemble the program) then execute 60s (run it). Eco: 60s / 90s.
 Both are hard limits; if the build timer expires, RUN immediately with what's on the table.
 
 **Legal spoken words:** only card words + **RUN**, **COMPLETE**, **STOP**.
@@ -518,7 +531,7 @@ no movement (that's an error) · undefined actions revert to the most mechanical
 **Safety:** "WILL CAUSE INJURY" is always valid, always free. Then replace the command and
 continue.
 
-**Eco Mode:** at least half the program is seated/arm-only; timers 120s / 90s.
+**Eco Mode:** at least half the program is seated/arm-only; timers 60s / 90s.
 
 **Modes:** Step = one card at a time. Script = memorize and execute without stopping
 (+1 bonus).
