@@ -8,7 +8,7 @@
 ![Play time: 30-60 min](https://img.shields.io/badge/PLAY_TIME-30--60_MIN-blue?style=for-the-badge)
 ![Ages: 9+](https://img.shields.io/badge/AGES-9%2B-orange?style=for-the-badge)
 ![Format: Print & Play](https://img.shields.io/badge/FORMAT-PRINT_%26_PLAY-brightgreen?style=for-the-badge)
-![Version: v0.4.0](https://img.shields.io/badge/VERSION-v0.4.0-informational?style=for-the-badge)
+![Version: v0.5.0](https://img.shields.io/badge/VERSION-v0.5.0-informational?style=for-the-badge)
 
 **Share link:** https://github.com/bayowulf/irobot
 
@@ -149,12 +149,13 @@ Gather these before the first session. None of them are printed cards.
    and look at their hand.
 2. **Build the Stack** — lay the cards in execution order, top to bottom. Every movement
    Action (MOVE, ROTATE, SPIN) must be paired with a Parameter card (see The Pairing Rule).
-3. **Press RUN** — say "RUN." The timer starts.
+3. **Press RUN** — say "RUN." The round timer starts. It is a **hard limit**: start it once
+   and let it run to zero — you never add or subtract time.
 4. **Serial Streaming** — read one card aloud, **verbatim**, one at a time. Wait for the
    Robot to finish and beep before reading the next card.
 5. **COMPLETE** — the Robot beeps (or says "COMPLETE") after each command.
-6. **Score** — the round ends when the Challenge is done, the timer expires, or the
-   Programmers call "STOP."
+6. **Score** — the round ends when the Challenge is done, the timer runs out, or the
+   Programmers call "STOP." Finishing the Challenge always means finishing before zero.
 
 ### The Pairing Rule
 
@@ -203,8 +204,9 @@ The Compiler slams the buzzer and yells **"COMPILER ERROR!"** The Robot freezes 
 1. Compiler spends **1 buzz token** and states the error in one sentence.
 2. Programmers may spend their **Overrule token** (1 per round) to cancel it.
    - The Compiler's buzz token is refunded, nothing is lost, and play resumes.
-3. Otherwise it's a **valid catch.** The Programmers lose **10 seconds** and **−1 team
-   token**, and may fix exactly the offending cards. Resume from the last completed command.
+3. Otherwise it's a **valid catch.** The Robot **freezes in place for 10 seconds while the
+   round timer keeps running**, and the Programmers lose **−1 team token**. They may fix
+   exactly the offending cards, then resume from the last completed command.
 
 The Compiler has **3 buzzes per round** and the Programmers have **1 Overrule** — no spam,
 real stakes. No votes, no debates.
@@ -223,7 +225,6 @@ night).
 | Event | Tokens |
 | --- | --- |
 | Programmers complete the Challenge | **+3** |
-| Programmers finish before the timer expires | **+1** |
 | Each **valid** Compiler Error | **−1** |
 | Compiler: each **valid** catch | **+2** |
 
@@ -240,8 +241,10 @@ night).
   buzz; the Compiler loses nothing.
 - The **Good Robot** bonus keeps the neutral Robot trying instead of trolling.
 
-> **Why tokens and not seconds:** mixed ages can track tokens on a table without doing
-> clock math, and nobody feels punished by a visible countdown draining away.
+> **Why tokens and not clock math:** the timer only starts at RUN and stops at zero — nobody
+> ever adds or subtracts time. A valid catch costs a **token** and a literal **10-second
+> freeze** (the clock keeps running while the Robot stands still), so mixed ages just track
+> tokens on the table instead of doing arithmetic on a countdown.
 
 ---
 
@@ -277,7 +280,8 @@ For a grandparent, an injured player, or a tired kid.
 
 - When Eco Mode is on, **at least half the cards in the stack must be seated/arm-only**
   (RAISE ARM, LOWER ARM, GRASP, RELEASE, POINT, LOOK, BEEP, FREEZE, OPEN MOUTH).
-- If the timer is tight, add **30 seconds**. The table decides together.
+- If the round timer is tight, set a longer limit up front (**120 seconds** instead of 90).
+  The limit is chosen before RUN — it is never extended mid-round.
 
 ---
 
@@ -391,28 +395,34 @@ in the corner. Symbols are hints, not requirements.
 
 Keep the Challenge hidden from the Robot. Difficulty is a suggestion — scale to the table.
 
+**Each Challenge is a goal, not a script.** The Programmers may solve it with **any legal
+card order** that gets the job done — the wording describes the outcome, not a required
+sequence. Different hands should be solved differently.
+
 ### Easy
 1. Pick up the ball and put it in the box.
 2. Point at the nearest human and beep.
 3. Pick up the cup and hand it to the person on your right.
 4. Raise both arms, then lower them.
+5. Look at the nearest human and beep.
+6. Rotate to face the nearest surface and point at it.
 
 ### Medium
-5. Walk to the table, pick up the empty glass, and set it on the nearest surface.
-6. Put the ball on the table, then hand the cup to a human.
-7. Grasp the object in front, rotate 90 degrees, and release it into the box.
-8. Touch the nearest human, then point at the nearest surface.
+7. Walk to the table, pick up the empty glass, and set it on the nearest surface.
+8. Put the ball on the table, then hand the cup to a human.
+9. Grasp the object in front, rotate 90 degrees, and release it into the box.
+10. Touch the nearest human, then point at the nearest surface.
 
 ### Hard
-9. Get the hat onto someone's head without touching them.
-10. Pick up the ball, spin 180 degrees, and place it on the nearest surface.
-11. Hand the cup to every human in the room, one at a time.
-12. Move to the table, grasp the glass, and return it to the robot's starting spot.
+11. Get the hat onto someone's head without touching them.
+12. Pick up the ball, spin 180 degrees, and place it on the nearest surface.
+13. Hand the cup to every human in the room, one at a time.
+14. Move to the table, grasp the glass, and return it to the robot's starting spot.
 
 ### Script Mode only (execute the whole stack without stopping)
-13. Pick up two objects and stack them.
-14. Collect one object from each human and deposit them in the box.
-15. Move, rotate, grasp, release, and beep — in exactly that order, twice.
+15. Pick up two objects and stack them.
+16. Collect one object from each human and deposit them in the box.
+17. Move, rotate, grasp, release, and beep — in exactly that order, twice.
 
 ---
 
@@ -443,8 +453,8 @@ new Robot. Early end only by unanimous consent.
 
 **Legal spoken words:** only card words + **RUN**, **COMPLETE**, **STOP**.
 
-**Team scoring (resets each session):** complete Challenge +3 · under time +1 · valid error
-−1 · Compiler valid catch +2. Never below zero.
+**Team scoring (resets each session):** complete Challenge +3 · valid error −1 · Compiler
+valid catch +2. Never below zero.
 
 **Personal scoring (all night):** +1 Session Star (winning team members) · +1 Comedy Point
 (funniest moment) · +1 Good Robot (Challenge completes on your Robot session).
@@ -454,7 +464,9 @@ new Robot. Early end only by unanimous consent.
 
 **Buzz rules:** Compiler gets 3 buzzes per round; Programmers get 1 Overrule token.
 Programmers may spend the Overrule to cancel one buzz (no penalty, Compiler refunded).
-Otherwise a buzz = −10 seconds and −1 team token.
+Otherwise a buzz = a **10-second Robot freeze while the clock runs**, plus −1 team token.
+
+**Timer:** a hard limit only — start at RUN, finish at zero. No adding or subtracting time.
 
 **Pairing:** every **MOVE**, **ROTATE**, or **SPIN** needs a paired Parameter card. Any
 Parameter works, and Parameters are reusable within a round (§4).

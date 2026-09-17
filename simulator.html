@@ -88,6 +88,7 @@
   .log .k-timeout{border-color:var(--glitch);color:#ff9b9b;font-weight:700}
   .log .k-safety{border-color:#e6b800;color:#ffe08a}
   .log .k-posture{border-color:#33456b;color:#bcd6ff}
+  .log .k-freeze{border-color:#e03131;color:#ffb3b3;font-weight:700}
   .log .k-round-end,.log .k-session-end{border-color:#7048e8;color:#d9c9ff;font-weight:700}
   .log .k-roles,.log .k-draw,.log .k-plan,.log .k-run{border-color:#33456b}
   .scoretbl{width:100%;border-collapse:collapse;font-size:12px}
@@ -265,21 +266,54 @@ const TURN_TIME = { "90 DEGREES":0.8, "180 DEGREES":1.4, "SPIN":1.8 };
 const STAND_ACTIONS = new Set(["MOVE","ROTATE","SPIN"]);
 
 const CHALLENGES = [
-  {id:1,diff:"easy",text:"Pick up the ball and put it in the box.",sig:[{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}]},
-  {id:2,diff:"easy",text:"Point at the nearest human and beep.",sig:[{a:"POINT"},{a:"BEEP"}]},
-  {id:3,diff:"easy",text:"Pick up the cup and hand it to the person on your right.",sig:[{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}]},
-  {id:4,diff:"easy",text:"Raise both arms, then lower them.",sig:[{a:"RAISE ARM"},{a:"LOWER ARM"}]},
-  {id:5,diff:"medium",text:"Walk to the table, pick up the empty glass, and set it on the nearest surface.",sig:[{a:"MOVE",p:"dist",d:3.0},{a:"GRASP"},{a:"RELEASE"}]},
-  {id:6,diff:"medium",text:"Put the ball on the table, then hand the cup to a human.",sig:[{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"},{a:"GRASP"},{a:"RELEASE"}]},
-  {id:7,diff:"medium",text:"Grasp the object in front, rotate 90 degrees, and release it into the box.",sig:[{a:"GRASP"},{a:"ROTATE",p:"angle"},{a:"RELEASE"}]},
-  {id:8,diff:"medium",text:"Touch the nearest human, then point at the nearest surface.",sig:[{a:"GRASP"},{a:"POINT"}]},
-  {id:9,diff:"hard",text:"Get the hat onto someone's head without touching them.",sig:[{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}]},
-  {id:10,diff:"hard",text:"Pick up the ball, spin 180 degrees, and place it on the nearest surface.",sig:[{a:"GRASP"},{a:"SPIN",p:"angle"},{a:"RELEASE"}]},
-  {id:11,diff:"hard",text:"Hand the cup to every human in the room, one at a time.",sig:[{a:"GRASP"},{a:"MOVE",p:"dist",d:1.5},{a:"RELEASE"},{a:"GRASP"},{a:"MOVE",p:"dist",d:1.5},{a:"RELEASE"}]},
-  {id:12,diff:"hard",text:"Move to the table, grasp the glass, and return it to the robot's starting spot.",sig:[{a:"MOVE",p:"dist",d:2.5},{a:"GRASP"},{a:"MOVE",p:"dist",d:2.5},{a:"RELEASE"}]},
-  {id:13,diff:"script",script:true,text:"Pick up two objects and stack them.",sig:[{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"},{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}]},
-  {id:14,diff:"script",script:true,text:"Collect one object from each human and deposit them in the box.",sig:[{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"},{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"},{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}]},
-  {id:15,diff:"script",script:true,text:"Move, rotate, grasp, release, and beep — in exactly that order, twice.",sig:[{a:"MOVE",p:"dist"},{a:"ROTATE",p:"angle"},{a:"GRASP"},{a:"RELEASE"},{a:"BEEP"},{a:"MOVE",p:"dist"},{a:"ROTATE",p:"angle"},{a:"GRASP"},{a:"RELEASE"},{a:"BEEP"}]}
+  {id:1,diff:"easy",text:"Pick up the ball and put it in the box.",sigs:[
+    [{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}],
+    [{a:"MOVE",p:"dist"},{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}]]},
+  {id:2,diff:"easy",text:"Point at the nearest human and beep.",sigs:[
+    [{a:"POINT"},{a:"BEEP"}],
+    [{a:"LOOK"},{a:"POINT"},{a:"BEEP"}],
+    [{a:"ROTATE",p:"angle"},{a:"POINT"},{a:"BEEP"}]]},
+  {id:3,diff:"easy",text:"Pick up the cup and hand it to the person on your right.",sigs:[
+    [{a:"ROTATE",p:"angle"},{a:"GRASP"},{a:"RELEASE"}],
+    [{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}]]},
+  {id:4,diff:"easy",text:"Raise both arms, then lower them.",sigs:[
+    [{a:"RAISE ARM"},{a:"LOWER ARM"}]]},
+  {id:5,diff:"easy",text:"Look at the nearest human and beep.",sigs:[
+    [{a:"LOOK"},{a:"BEEP"}]]},
+  {id:6,diff:"easy",text:"Rotate to face the nearest surface and point at it.",sigs:[
+    [{a:"ROTATE",p:"angle"},{a:"POINT"}],
+    [{a:"LOOK"},{a:"ROTATE",p:"angle"},{a:"POINT"}]]},
+  {id:7,diff:"medium",text:"Walk to the table, pick up the empty glass, and set it on the nearest surface.",sigs:[
+    [{a:"MOVE",p:"dist",d:3.0},{a:"GRASP"},{a:"RELEASE"}],
+    [{a:"MOVE",p:"dist",d:3.0},{a:"LOOK"},{a:"GRASP"},{a:"RELEASE"}],
+    [{a:"ROTATE",p:"angle"},{a:"MOVE",p:"dist",d:3.0},{a:"GRASP"},{a:"RELEASE"}]]},
+  {id:8,diff:"medium",text:"Put the ball on the table, then hand the cup to a human.",sigs:[
+    [{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"},{a:"GRASP"},{a:"RELEASE"}],
+    [{a:"MOVE",p:"dist"},{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"},{a:"GRASP"},{a:"RELEASE"}]]},
+  {id:9,diff:"medium",text:"Grasp the object in front, rotate 90 degrees, and release it into the box.",sigs:[
+    [{a:"GRASP"},{a:"ROTATE",p:"angle"},{a:"RELEASE"}],
+    [{a:"LOOK"},{a:"GRASP"},{a:"ROTATE",p:"angle"},{a:"RELEASE"}]]},
+  {id:10,diff:"medium",text:"Touch the nearest human, then point at the nearest surface.",sigs:[
+    [{a:"GRASP"},{a:"POINT"}],
+    [{a:"MOVE",p:"dist"},{a:"GRASP"},{a:"POINT"}]]},
+  {id:11,diff:"hard",text:"Get the hat onto someone's head without touching them.",sigs:[
+    [{a:"LOOK"},{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}],
+    [{a:"GRASP"},{a:"ROTATE",p:"angle"},{a:"MOVE",p:"dist"},{a:"RELEASE"}]]},
+  {id:12,diff:"hard",text:"Pick up the ball, spin 180 degrees, and place it on the nearest surface.",sigs:[
+    [{a:"GRASP"},{a:"SPIN",p:"angle"},{a:"RELEASE"}],
+    [{a:"GRASP"},{a:"ROTATE",p:"angle"},{a:"RELEASE"}]]},
+  {id:13,diff:"hard",text:"Hand the cup to every human in the room, one at a time.",sigs:[
+    [{a:"GRASP"},{a:"MOVE",p:"dist",d:1.5},{a:"RELEASE"},{a:"GRASP"},{a:"MOVE",p:"dist",d:1.5},{a:"RELEASE"}]]},
+  {id:14,diff:"hard",text:"Move to the table, grasp the glass, and return it to the robot's starting spot.",sigs:[
+    [{a:"MOVE",p:"dist",d:2.5},{a:"GRASP"},{a:"MOVE",p:"dist",d:2.5},{a:"RELEASE"}],
+    [{a:"ROTATE",p:"angle"},{a:"MOVE",p:"dist",d:2.5},{a:"GRASP"},{a:"ROTATE",p:"angle"},{a:"MOVE",p:"dist",d:2.5},{a:"RELEASE"}]]},
+  {id:15,diff:"script",script:true,text:"Pick up two objects and stack them.",sigs:[
+    [{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"},{a:"GRASP"},{a:"MOVE",p:"dist"},{a:"RELEASE"}],
+    [{a:"GRASP"},{a:"GRASP"},{a:"RELEASE"},{a:"RELEASE"}]]},
+  {id:16,diff:"script",script:true,text:"Collect one object from each human and deposit them in the box.",sigs:[
+    [{a:"GRASP"},{a:"MOVE",p:"dist",d:1.5},{a:"RELEASE"},{a:"GRASP"},{a:"MOVE",p:"dist",d:1.5},{a:"RELEASE"},{a:"GRASP"},{a:"MOVE",p:"dist",d:1.5},{a:"RELEASE"}]]},
+  {id:17,diff:"script",script:true,text:"Move, rotate, grasp, release, and beep — in exactly that order, twice.",sigs:[
+    [{a:"MOVE",p:"dist"},{a:"ROTATE",p:"angle"},{a:"GRASP"},{a:"RELEASE"},{a:"BEEP"},{a:"MOVE",p:"dist"},{a:"ROTATE",p:"angle"},{a:"GRASP"},{a:"RELEASE"},{a:"BEEP"}]]}
 ];
 
 function hashSeed(str){
@@ -421,8 +455,8 @@ function simulate(cfg){
     deck: deckCounts(cfg), draws:{}, plays:{}, wildcardUses:0, hands:0, unsolvable:0,
     missingByWord:{}, rounds:[], errors:{syntax:0,runtime:0,missed:0,safety:0},
     buzz:{used:0,refunded:0,missed:0}, overrule:0, glitch:0, compilerCards:0, completed:0, timeout:0,
-    paramSteps:0, paramDistinct:0, paramReuse:0, paramPoolHands:0, paramStarvedHands:0, challenges:{},
-    time:{draft:0, read:0, execute:0, move:0, arm:0, stand:0, gap:0, buzz:0}
+    paramSteps:0, paramDistinct:0, paramReuse:0, paramPoolHands:0, paramStarvedHands:0, challenges:{}, openings:{},
+    time:{draft:0, read:0, execute:0, move:0, arm:0, stand:0, gap:0, buzz:0, freeze:0}
   };
 
   const codingDeck = [];
@@ -446,11 +480,21 @@ function simulate(cfg){
     for (let i=0;i<2;i++){ const w = {uid:"w"+(uidCounter++), cat:"wild", word:"BLANK"}; hand.push(w); }
     return hand;
   }
+  const usedChallenges = new Set();
   function chooseChallenge(){
     const weights = {easy: cfg.eco?4:3, medium:3, hard: cfg.eco?1:3, script:1};
+    let avail = CHALLENGES.filter(c => !usedChallenges.has(c.id));
+    if (avail.length === 0){ usedChallenges.clear(); avail = CHALLENGES.slice(); }
     const pool = [];
-    CHALLENGES.forEach(c => { const w = weights[c.diff]||1; for(let i=0;i<w;i++) pool.push(c); });
-    return rng.pick(pool);
+    avail.forEach(c => { const w = weights[c.diff]||1; for(let i=0;i<w;i++) pool.push(c); });
+    const c = rng.pick(pool);
+    usedChallenges.add(c.id);
+    return c;
+  }
+  function pickTemplate(challenge, hand){
+    const results = challenge.sigs.map(sig => Object.assign({sig}, analyzeHand(hand, sig, rng)));
+    const min = Math.min(...results.map(r => r.missing.length));
+    return rng.pick(results.filter(r => r.missing.length === min));
   }
 
   const readerOf = (prog) => { const p = PLAYERS[prog[0]], q = PLAYERS[prog[1]]; return p.read <= q.read ? p : q; };
@@ -487,11 +531,13 @@ function simulate(cfg){
     analytics.time.draft += draftTime;
     wait(draftTime);
 
-    const plan = analyzeHand(hand, challenge.sig, rng);
+    const plan = pickTemplate(challenge, hand);
+    const sig = plan.sig;
+    analytics.openings[sig[0].a] = (analytics.openings[sig[0].a]||0)+1;
     analytics.wildcardUses += plan.wilds;
     plan.missing.forEach(m => { analytics.missingByWord[m.word] = (analytics.missingByWord[m.word]||0)+1; });
     if (plan.missing.length > 0) analytics.unsolvable++;
-    const movementSteps = challenge.sig.filter(s => s.p).length;
+    const movementSteps = sig.filter(s => s.p).length;
     const poolInHand = hand.filter(c => c.cat==="param").length;
     analytics.paramSteps += movementSteps;
     analytics.paramDistinct += plan.paramsUsed;
@@ -508,7 +554,7 @@ function simulate(cfg){
     const buildTime = plan.stack.length * (searchTime(plan.stack.length / 2, reader, rng) + pickup(reader, rng) + deliberate(reader, rng));
     analytics.time.draft += buildTime;
     wait(buildTime);
-    push("plan", `Stack built with ${plan.stack.length} command slots${plan.missing.length?` — ${plan.missing.length} requirement(s) uncovered`:""}. Wildcards used: ${plan.wilds}.`, {challenge, hand, stack:plan.stack, missing:plan.missing});
+    push("plan", `Stack built with ${plan.stack.length} command slots${plan.missing.length?` — ${plan.missing.length} requirement(s) uncovered`:""}. Wildcards used: ${plan.wilds}.`, {challenge, hand, stack:plan.stack, missing:plan.missing, sig});
 
     let status = {glitch:null, cmdsLeft:0};
     if (rng.chance(0.5)){
@@ -556,11 +602,11 @@ function simulate(cfg){
         push("overrule", `Programmers spend the Overrule token — buzz cancelled, Compiler's token refunded. Play resumes.`, {stackIndex:idx});
         wait(1.0);
       } else {
-        remaining -= 10;
         scores.team[progLabel] = Math.max(0, scores.team[progLabel]-1);
         scores.team[progLabel==="A"?"B":"A"] += 2;
-        push("penalty", `Valid catch. ${progTeamLocal.map(i=>PLAYERS[i].name).join(" & ")} lose 10 seconds and 1 team token; Compilers gain 2.`, {stackIndex:idx});
-        wait(1.5 + rng.range(0,1));
+        push("freeze", `Valid catch. ${robotP.name} freezes for 10 seconds while the clock runs — 1 team token lost, Compilers gain 2.`, {stackIndex:idx, posture});
+        analytics.time.freeze += 10;
+        wait(10);
       }
     }
 
@@ -664,11 +710,10 @@ function simulate(cfg){
     let roundResult;
     if (remaining > 0 && complete && plan.missing.length === 0){
       scores.team[progLabel] += 3;
-      if (remaining > 0) scores.team[progLabel] += 1;
       analytics.completed++;
       analytics.challenges[challenge.id].completed++;
       roundResult = {round, completed:true, used:timerStart-remaining, team:progLabel};
-      push("complete", `Challenge COMPLETE with ${remaining.toFixed(1)}s to spare — ${progLabel==="A"?"Team A":"Team B"} scores +3 (+1 under time).`, {});
+      push("complete", `Challenge COMPLETE with ${remaining.toFixed(1)}s to spare — ${progLabel==="A"?"Team A":"Team B"} scores +3.`, {});
     } else if (remaining <= 0){
       analytics.timeout++;
       roundResult = {round, completed:false, used:timerStart, team:progLabel, reason:"timeout"};
@@ -735,13 +780,18 @@ function buildDiagnostics(A){
     const coverage = A.hands ? Math.round(100*A.paramPoolHands/A.hands) : 0;
     out.push(`<b>Pairing:</b> ${A.paramSteps} movement step(s) demanded a Parameter; hands held one ${coverage}% of the time. Reuse covered ${A.paramReuse} step(s) beyond the first distinct Parameter. ${A.paramStarvedHands>0 ? `${A.paramStarvedHands} hand(s) had no Parameter at all — now a Syntax Error.` : `No hand was ever Parameter-starved.`}`);
   }
+  if (A.openings){
+    const ops = Object.entries(A.openings).sort((a,b)=>b[1]-a[1]);
+    const total = ops.reduce((s,e)=>s+e[1],0);
+    if (total) out.push(`<b>Openings:</b> ${ops.map(([k,v])=>`${k} ${Math.round(100*v/total)}%`).join(" · ")}.`);
+  }
   if (avgUsed > 75) out.push(`<b>Time pressure:</b> rounds consume ~${avgUsed.toFixed(0)}s of the 90s budget on average. Consider +15–30s or easier Challenges.`);
   else if (avgUsed > 0 && avgUsed < 35) out.push(`<b>Under-tension:</b> rounds finish in ~${avgUsed.toFixed(0)}s — the timer rarely bites. Consider harder Challenges or a shorter clock.`);
   if (A.buzz.used === 0) out.push(`<b>Compiler idle:</b> no valid buzzes all session. Either hand quality is too high or Compiler incentives/penalties need tuning.`);
   if (A.buzz.missed > 0) out.push(`<b>Missed errors:</b> ${A.buzz.missed} real error(s) went unchallenged (reaction/reach limits).`);
   if (A.glitch === 0) out.push(`<b>Glitch deck idle:</b> no Glitch cards entered play. BUG INJECTION frequency may be too low to matter.`);
   if (A.compilerCards === 0) out.push(`<b>Compiler cards idle:</b> none of the 5 Compiler cards were used.`);
-  if (A.time) out.push(`<b>Timing mix:</b> draft ${A.time.draft.toFixed(0)}s · read ${A.time.read.toFixed(0)}s · execute ${A.time.execute.toFixed(0)}s (move ${A.time.move.toFixed(0)}s) · stand/sit ${A.time.stand.toFixed(0)}s · handoff ${A.time.gap.toFixed(0)}s · buzz ${A.time.buzz.toFixed(0)}s (whole session).`);
+  if (A.time) out.push(`<b>Timing mix:</b> draft ${A.time.draft.toFixed(0)}s · read ${A.time.read.toFixed(0)}s · execute ${A.time.execute.toFixed(0)}s (move ${A.time.move.toFixed(0)}s) · stand/sit ${A.time.stand.toFixed(0)}s · handoff ${A.time.gap.toFixed(0)}s · buzz ${A.time.buzz.toFixed(0)}s · freeze ${A.time.freeze.toFixed(0)}s (whole session).`);
   if (!out.length) out.push(`No balance flags raised this session. Run more seeds to confirm stability.`);
   return out;
 }
@@ -862,7 +912,7 @@ function applyEvent(ev){
       ui.challenge = ev.challenge; ui.hand = ev.hand;
       $("#chaltext").textContent = ev.challenge.text;
       $("#difftag").textContent = ev.challenge.diff.toUpperCase() + (ev.challenge.script?" · SCRIPT":"");
-      $("#chalsig").textContent = `Required: ${ev.challenge.sig.map(s=>s.a+(s.p?"("+s.p+")":"")).join(" → ")} · hidden from ${PLAYERS[cfg.robot].name}`;
+      $("#chalsig").textContent = `Goal + hand hidden from ${PLAYERS[cfg.robot].name} · ${ev.challenge.sigs.length} valid order(s)`;
       renderHand(ev.hand);
       renderStack(null);
       setRobotState(PLAYERS[cfg.robot].name, "oblivious to the Challenge");
@@ -871,6 +921,7 @@ function applyEvent(ev){
     case "plan":
       ui.stack = ev.stack;
       renderStack(ev.stack, -1);
+      if (ev.sig) $("#chalsig").textContent = `Chosen order: ${ev.sig.map(s=>s.a+(s.p?"("+s.p+")":"")).join(" → ")} (1 of ${ev.challenge.sigs.length})`;
       break;
     case "run":
       $("#roundlbl").textContent = "Round " + ev.round + " · RUN";
@@ -894,6 +945,9 @@ function applyEvent(ev){
       $("#buzzer").classList.add("lit");
       setTimeout(()=>$("#buzzer").classList.remove("lit"), 600);
       setRobotState(PLAYERS[cfg.robot].name, "FROZEN — Compiler Error");
+      break;
+    case "freeze":
+      setRobotState(PLAYERS[cfg.robot].name, "FROZEN 10s — penalty");
       break;
     case "complete":
       setRobotState(PLAYERS[cfg.robot].name, "challenge complete");
@@ -1027,7 +1081,7 @@ function renderAnalytics(){
     </div>`;
 }
 
-const SIM_VERSION = "0.4.0";
+const SIM_VERSION = "0.5.0";
 
 function logLines(){
   return (ui.tape || []).map(ev => {
@@ -1088,8 +1142,8 @@ function aggregateRuns(runs){
     glitch:0, compilerCards:0, wildcardUses:0, unsolvable:0, hands:0,
     missingTotal:0, missingByWord:{},
     paramSteps:0, paramDistinct:0, paramReuse:0, paramPoolHands:0, paramStarvedHands:0,
-    cards:{}, challenges:{},
-    time:{draft:0, read:0, execute:0, move:0, arm:0, stand:0, gap:0, buzz:0}
+    cards:{}, challenges:{}, openings:{},
+    time:{draft:0, read:0, execute:0, move:0, arm:0, stand:0, gap:0, buzz:0, freeze:0}
   };
   runs.forEach(r => {
     const a = r.analytics;
@@ -1110,6 +1164,7 @@ function aggregateRuns(runs){
       c.drawn += a.draws[w]||0; c.played += a.plays[w]||0;
     });
     if (a.time) Object.keys(A.time).forEach(k => { A.time[k] += a.time[k]||0; });
+    Object.keys(a.openings||{}).forEach(k => { A.openings[k] = (A.openings[k]||0) + a.openings[k]; });
     Object.keys(a.missingByWord||{}).forEach(w => { A.missingByWord[w] = (A.missingByWord[w]||0) + a.missingByWord[w]; });
     Object.keys(a.challenges||{}).forEach(id => {
       const c = A.challenges[id] || (A.challenges[id] = {drawn:0, completed:0});
@@ -1138,7 +1193,12 @@ function buildAggregateDiagnostics(A){
   }
   if (A.unsolvable > 0) out.push(`<b>Solvability:</b> ${A.unsolvable}/${A.hands} hands (${Math.round(100*A.unsolvable/A.hands)}%) unsatisfiable even with both wildcards.`);
   if (A.paramSteps > 0) out.push(`<b>Pairing:</b> ${A.paramSteps} movement steps · ${A.paramDistinct} distinct params · ${A.paramReuse} reused · ${A.paramStarvedHands} starved hand(s).`);
-  out.push(`<b>Timing mix (all sessions):</b> draft ${A.time.draft.toFixed(0)}s · read ${A.time.read.toFixed(0)}s · execute ${A.time.execute.toFixed(0)}s (move ${A.time.move.toFixed(0)}s) · stand/sit ${A.time.stand.toFixed(0)}s · handoff ${A.time.gap.toFixed(0)}s · buzz ${A.time.buzz.toFixed(0)}s.`);
+  {
+    const ops = Object.entries(A.openings).sort((a,b)=>b[1]-a[1]);
+    const total = ops.reduce((s,e)=>s+e[1],0);
+    if (total) out.push(`<b>Openings:</b> ${ops.map(([k,v])=>`${k} ${Math.round(100*v/total)}%`).join(" · ")}.`);
+  }
+  out.push(`<b>Timing mix (all sessions):</b> draft ${A.time.draft.toFixed(0)}s · read ${A.time.read.toFixed(0)}s · execute ${A.time.execute.toFixed(0)}s (move ${A.time.move.toFixed(0)}s) · stand/sit ${A.time.stand.toFixed(0)}s · handoff ${A.time.gap.toFixed(0)}s · buzz ${A.time.buzz.toFixed(0)}s · freeze ${A.time.freeze.toFixed(0)}s.`);
   if (A.neverDrawn.length) out.push(`<b>Never drawn:</b> ${A.neverDrawn.join(", ")}.`);
   if (A.drawnNotPlayed.length) out.push(`<b>Drawn but never played:</b> ${A.drawnNotPlayed.join(", ")}.`);
   out.push(`<b>Errors:</b> syntax ${A.errors.syntax} · runtime ${A.errors.runtime} · missed ${A.errors.missed} · safety ${A.errors.safety} · buzzes ${A.buzz.used} · overrules ${A.overrule}.`);
